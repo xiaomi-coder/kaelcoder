@@ -21,7 +21,7 @@ router.get('/exe', authMiddleware, async (req, res) => {
       .eq('id', req.user.id);
 
     // Send EXE file
-    const filePath = path.join(__dirname, '..', '..', 'files', 'formehub.exe');
+    const filePath = path.join(__dirname, '..', 'files', 'formehub.exe');
     res.download(filePath, 'ShiftHub.exe');
   } catch (err) {
     console.error('Download error:', err);
@@ -33,7 +33,7 @@ router.get('/exe', authMiddleware, async (req, res) => {
 router.get('/weapons/:filename', authMiddleware, async (req, res) => {
   try {
     const filename = req.params.filename.replace(/[^a-zA-Z0-9_\-\.]/g, '');
-    const filePath = path.join(__dirname, '..', '..', 'files', 'weapons', filename);
+    const filePath = path.join(__dirname, '..', 'files', 'weapons', filename);
     res.download(filePath);
   } catch (err) {
     res.status(404).json({ error: 'Fayl topilmadi' });
@@ -44,7 +44,7 @@ router.get('/weapons/:filename', authMiddleware, async (req, res) => {
 router.get('/list', authMiddleware, async (req, res) => {
   const fs = require('fs');
   try {
-    const weaponsDir = path.join(__dirname, '..', '..', 'files', 'weapons');
+    const weaponsDir = path.join(__dirname, '..', 'files', 'weapons');
     let files = [];
     if (fs.existsSync(weaponsDir)) {
       files = fs.readdirSync(weaponsDir).map(f => ({

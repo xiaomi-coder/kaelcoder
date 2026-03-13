@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 // Static files (frontend)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API routes
 app.use('/api/auth', authRoutes);
