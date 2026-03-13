@@ -110,6 +110,20 @@
   .cursor { width:20px; height:20px; border:2px solid var(--green); border-radius:50%; position:fixed; pointer-events:none; z-index:9999; transition:transform 0.1s; box-shadow:0 0 10px var(--green); }
   .cursor-dot { width:4px; height:4px; background:var(--green); border-radius:50%; position:fixed; pointer-events:none; z-index:9999; }
 
+  .cursor-tag {
+    position:fixed; pointer-events:none; z-index:9998;
+    font-family:'Orbitron',monospace; font-size:11px; font-weight:700;
+    color:var(--green); letter-spacing:3px;
+    text-shadow:0 0 8px var(--green), 0 0 20px rgba(0,255,65,0.4);
+    opacity:0.85; transition:all 0.15s ease;
+    padding:4px 12px;
+    border:1px solid rgba(0,255,65,0.3);
+    background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(4px);
+  }
+  .cursor-tag::before { content:'< '; color:rgba(0,255,65,0.5); }
+  .cursor-tag::after { content:' />'; color:rgba(0,255,65,0.5); }
+
   body::before {
     content:''; position:fixed; inset:0;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,65,0.025) 2px, rgba(0,255,65,0.025) 4px);
@@ -289,6 +303,7 @@
   <canvas id="matrix-canvas"></canvas>
   <div class="cursor" id="cursor"></div>
   <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-tag" id="cursorTag">By: Bisikoo</div>
 
   <nav>
     <div class="logo">SHIFT<span>HUB</span></div>
@@ -472,6 +487,7 @@
 
   <footer>
     <span>© 2024 SHIFTHUB // ALL RIGHTS RESERVED</span>
+    <span style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--green);letter-spacing:3px;text-shadow:0 0 10px var(--green),0 0 25px rgba(0,255,65,0.4);animation:glitch 5s infinite;">⟨ By: Bisikoo ⟩</span>
     <span id="footer-ip">STATUS: ONLINE ✓</span>
     <span>v1.0.0</span>
   </footer>
@@ -628,11 +644,14 @@ function initPortfolio() {
   // Custom cursor
   const cursor = document.getElementById('cursor');
   const dot    = document.getElementById('cursorDot');
+  const tag    = document.getElementById('cursorTag');
   document.addEventListener('mousemove', e => {
     cursor.style.left = e.clientX - 10 + 'px';
     cursor.style.top  = e.clientY - 10 + 'px';
     dot.style.left    = e.clientX - 2 + 'px';
     dot.style.top     = e.clientY - 2 + 'px';
+    tag.style.left    = e.clientX + 18 + 'px';
+    tag.style.top     = e.clientY + 18 + 'px';
   });
   document.addEventListener('mousedown', () => cursor.style.transform = 'scale(0.7)');
   document.addEventListener('mouseup',   () => cursor.style.transform = 'scale(1)');
