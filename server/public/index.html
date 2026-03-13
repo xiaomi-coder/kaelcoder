@@ -309,7 +309,7 @@
     <p class="hero-desc uz">Eng yuqori sifatli CS2 dasturi. Xavfsiz, tez, ishonchli. Har oyda yangilanib turadi.</p>
     <p class="hero-desc ru">Премиум CS2 программное обеспечение. Безопасно, быстро, надёжно. Обновляется каждый месяц.</p>
     <div class="hero-btns">
-      <a href="javascript:void(0)" class="btn btn-primary" onclick="openModal('register')"><span class="uz">YUKLAB OLISH</span><span class="ru">СКАЧАТЬ</span></a>
+      <a href="javascript:void(0)" class="btn btn-primary" onclick="downloadEXE()"><span class="uz">YUKLAB OLISH</span><span class="ru">СКАЧАТЬ</span></a>
       <a href="#features" class="btn btn-outline uz">BATAFSIL</a>
       <a href="#features" class="btn btn-outline ru">ПОДРОБНЕЕ</a>
     </div>
@@ -740,6 +740,35 @@ function updateNavAuth() {
   } else {
     el.innerHTML = `<button class="lang-btn" onclick="openModal('login')" id="nav-login-btn">LOGIN</button>`;
   }
+}
+
+// Download EXE function
+async function downloadEXE() {
+  const token = localStorage.getItem('sh_token');
+  if (!token) {
+    openModal('register');
+    return;
+  }
+  try {
+    const res = await fetch(API_URL + '/files/exe', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('sh_token');
+      localStorage.removeItem('sh_user');
+      updateNavAuth();
+      openModal('login');
+      return;
+    }
+    if (!res.ok) { alert('Yuklab olishda xato!'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ShiftHub.exe';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('Server bilan bog\'lanishda xato'); }
 }
 
 // Check auth on load
