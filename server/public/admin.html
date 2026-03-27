@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHIFTHUB — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --green:#00ff41; --green-dim:#00cc33; --green-dark:#003b00; --bg:#000; --bg2:#020d02; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--green); font-family:'Share Tech Mono',monospace; }
+  header { padding:16px 32px; border-bottom:1px solid var(--green-dark); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.95); }
+  .logo { font-family:'Orbitron',monospace; font-size:20px; font-weight:900; color:var(--green); letter-spacing:4px; }
+  .logo span { color:#fff; font-size:12px; letter-spacing:2px; }
+
+  .admin-login { padding:40px; max-width:400px; margin:80px auto; }
+  .admin-login input { width:100%; padding:12px; background:var(--bg2); border:1px solid var(--green-dark); color:var(--green); font-family:inherit; font-size:14px; margin-bottom:12px; outline:none; }
+  .admin-login input:focus { border-color:var(--green); }
+  .admin-login button { width:100%; padding:12px; background:var(--green); color:#000; font-family:'Orbitron',monospace; font-weight:700; border:none; cursor:pointer; letter-spacing:3px; }
+
+  #dashboard { display:none; padding:24px 32px; }
+
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:32px; }
+  .stat-card { background:var(--bg2); border:1px solid var(--green-dark); padding:20px; text-align:center; }
+  .stat-num { font-family:'Orbitron',monospace; font-size:32px; font-weight:900; color:var(--green); text-shadow:0 0 15px rgba(0,255,65,0.4); }
+  .stat-label { font-size:11px; letter-spacing:3px; color:var(--green-dim); margin-top:8px; text-transform:uppercase; }
+
+  h2 { font-family:'Orbitron',monospace; font-size:16px; font-weight:700; color:var(--green); margin-bottom:16px; letter-spacing:3px; border-left:3px solid var(--green); padding-left:12px; }
+
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:var(--bg2); color:var(--green-dim); text-align:left; padding:10px 12px; letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid var(--green-dark); }
+  td { padding:10px 12px; border-bottom:1px solid var(--green-dark); color:var(--green-dim); }
+  tr:hover td { background:rgba(0,255,65,0.03); color:var(--green); }
+
+  .tier-badge { padding:3px 10px; font-size:10px; letter-spacing:2px; font-weight:bold; text-transform:uppercase; }
+  .tier-free { color:#aaffaa; border:1px solid #336633; }
+  .tier-mid { color:#ffcc00; border:1px solid #665500; }
+  .tier-pro { color:#ff66ff; border:1px solid #663366; }
+
+  .action-btn { padding:4px 10px; font-size:10px; font-family:inherit; letter-spacing:1px; border:1px solid var(--green-dark); background:transparent; color:var(--green-dim); cursor:pointer; margin:0 2px; transition:all 0.2s; }
+  .action-btn:hover { border-color:var(--green); color:var(--green); background:rgba(0,255,65,0.08); }
+  .action-btn.danger { border-color:#660000; color:#ff4444; }
+  .action-btn.danger:hover { background:rgba(255,0,0,0.1); border-color:#ff4444; }
+
+  .settings-section { margin-top:32px; padding:20px; background:var(--bg2); border:1px solid var(--green-dark); max-width:400px; }
+  .settings-section input { width:120px; padding:6px 10px; background:var(--bg); border:1px solid var(--green-dark); color:var(--green); font-family:inherit; font-size:13px; margin:0 8px; }
+  .settings-section label { font-size:12px; color:var(--green-dim); letter-spacing:2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">SHIFTHUB <span>// ADMIN</span></div>
+  <button class="action-btn" onclick="location.href='/'">← SAYTGA</button>
+</header>
+
+<div class="admin-login" id="admin-login">
+  <h2>// ADMIN LOGIN</h2>
+  <input type="password" id="admin-key" placeholder="Admin password...">
+  <button onclick="adminLogin()">KIRISH</button>
+  <div id="admin-error" style="color:#ff4444;font-size:12px;margin-top:8px;"></div>
+</div>
+
+<div id="dashboard">
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <h2>// FOYDALANUVCHILAR</h2>
+  <table>
+    <thead><tr>
+      <th>Username</th><th>Tier</th><th>HWID</th><th>Yaratilgan</th>
+      <th>Tugaydi</th><th>Soat</th><th>Oxirgi</th><th>Downloads</th><th>Amallar</th>
+    </tr></thead>
+    <tbody id="users-table"></tbody>
+  </table>
+
+  <div class="settings-section">
+    <h2 style="margin-bottom:12px;">// SOZLAMALAR</h2>
+    <label>FREE sinov kunlari:</label>
+    <input type="number" id="trial-days" value="10" min="1">
+    <button class="action-btn" onclick="saveTrialDays()">SAQLASH</button>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+let ADMIN_KEY = '';
+
+function adminLogin() {
+  ADMIN_KEY = document.getElementById('admin-key').value;
+  loadDashboard();
+}
+
+async function apiFetch(url, opts = {}) {
+  if (!opts.headers) opts.headers = {};
+  opts.headers['x-admin-key'] = ADMIN_KEY;
+  opts.headers['Content-Type'] = 'application/json';
+  const res = await fetch(API + url, opts);
+  return res.json();
+}
+
+async function loadDashboard() {
+  try {
+    const stats = await apiFetch('/admin/stats');
+    if (stats.error) { document.getElementById('admin-error').textContent = stats.error; return; }
+
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${stats.total_users}</div><div class="stat-label">Jami Users</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.online_now}</div><div class="stat-label">Hozir Online</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.total_downloads}</div><div class="stat-label">Yuklamalar</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.total_hours}h</div><div class="stat-label">Jami Soat</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.tier_counts.free}</div><div class="stat-label">Free</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.tier_counts.mid}</div><div class="stat-label">Mid</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.tier_counts.pro}</div><div class="stat-label">Pro</div></div>
+    `;
+
+    loadUsers();
+  } catch(e) { document.getElementById('admin-error').textContent = 'Server bilan bog\'lanishda xato'; }
+}
+
+async function loadUsers() {
+  const data = await apiFetch('/admin/users');
+  if (data.error) return;
+
+  const tbody = document.getElementById('users-table');
+  tbody.innerHTML = data.users.map(u => {
+    const created = new Date(u.created_at).toLocaleDateString('uz');
+    const expires = new Date(u.expires_at).toLocaleDateString('uz');
+    const lastOnline = u.last_online ? timeAgo(u.last_online) : '-';
+    const hours = Math.round((u.total_minutes || 0) / 60);
+    const tierClass = 'tier-' + u.tier;
+    const blocked = u.is_blocked;
+
+    return `<tr style="${blocked ? 'opacity:0.4;' : ''}">
+      <td><strong>${u.username}</strong></td>
+      <td><span class="tier-badge ${tierClass}">${u.tier}</span></td>
+      <td style="font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis;">${u.hwid || '-'}</td>
+      <td>${created}</td>
+      <td>${expires}</td>
+      <td>${hours}h</td>
+      <td>${lastOnline}</td>
+      <td>${u.download_count || 0}</td>
+      <td>
+        <button class="action-btn" onclick="setTier('${u.id}','free',30)">FREE</button>
+        <button class="action-btn" onclick="setTier('${u.id}','mid',30)">MID</button>
+        <button class="action-btn" onclick="setTier('${u.id}','pro',30)">PRO</button>
+        <button class="action-btn ${blocked ? '' : 'danger'}" onclick="toggleBlock('${u.id}',${!blocked})">${blocked ? 'UNBLOCK' : 'BLOCK'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function setTier(id, tier, days) {
+  await apiFetch(`/admin/users/${id}/tier`, { method:'PUT', body: JSON.stringify({tier, days}) });
+  loadDashboard();
+}
+
+async function toggleBlock(id, blocked) {
+  await apiFetch(`/admin/users/${id}/block`, { method:'PUT', body: JSON.stringify({blocked}) });
+  loadDashboard();
+}
+
+async function saveTrialDays() {
+  const days = document.getElementById('trial-days').value;
+  await apiFetch('/admin/settings/free_trial_days', { method:'PUT', body: JSON.stringify({value:days}) });
+  alert('Saqlandi: ' + days + ' kun');
+}
+
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - new Date(date)) / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
+}
+</script>
+</body>
+</html>
