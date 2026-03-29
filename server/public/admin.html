@@ -164,6 +164,14 @@
   <div class="section-header">
     <h2>// FOYDALANUVCHILAR</h2>
     <div class="search-box">
+      <select id="category-filter" onchange="filterUsers()" style="background: transparent; border: none; color: var(--green); outline: none; border-right: 1px solid var(--border); margin-right: 10px; padding-right: 10px; font-family: inherit; font-size: 13px; cursor: pointer;">
+        <option value="all" style="background: #000; color: #fff;">Hammasi</option>
+        <option value="online" style="background: #000; color: #0f0;">Online qatnashchilar</option>
+        <option value="free" style="background: #000; color: #aaffaa;">Free</option>
+        <option value="mid" style="background: #000; color: #ffcc00;">Mid</option>
+        <option value="pro" style="background: #000; color: #ff66ff;">Pro</option>
+        <option value="blocked" style="background: #000; color: #ff4444;">Bloklanganlar</option>
+      </select>
       <input type="text" id="search-input" placeholder="Username yoki HWID..." onkeyup="filterUsers()">
     </div>
   </div>
@@ -171,7 +179,7 @@
   <div class="table-container">
     <table>
       <thead><tr>
-        <th>Username</th><th>Tier</th><th>HWID</th><th>Yaratilgan</th>
+        <th>Username</th><th>Tier</th><th>IP Address</th><th>HWID</th><th>Yaratilgan</th>
         <th>Tugaydi</th><th>Soat</th><th>Oxirgi</th><th>Yuklashlar</th><th>Amallar</th>
       </tr></thead>
       <tbody id="users-table"></tbody>
@@ -214,6 +222,21 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('block-modal')">BEKOR QILISH</button>
       <button class="btn btn-danger" id="block-confirm-btn" onclick="confirmBlock()">TASDIQLASH</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Geolocation -->
+<div class="modal-overlay" id="geo-modal">
+  <div class="modal">
+    <h3 id="geo-title">// LOKATSIYA</h3>
+    <div style="margin-bottom: 20px; color: #ccc; font-size: 14px; line-height: 1.6;">
+      <div><b>Hudud:</b> <span id="geo-location" style="color:var(--green)">...</span></div>
+      <div><b>Internet Provayder:</b> <span id="geo-isp" style="color:var(--green)">...</span></div>
+      <div style="margin-top: 10px;"><b>Xarita:</b> <a id="geo-map-link" href="#" target="_blank" style="color:#ffcc00; text-decoration:none;">Google Maps'da ochish ↗</a></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('geo-modal')">YOPISH</button>
     </div>
   </div>
 </div>
@@ -302,10 +325,29 @@ async function loadUsers() {
 
 function filterUsers() {
   const query = document.getElementById('search-input').value.toLowerCase();
-  const filtered = allUsers.filter(u => 
-    u.username.toLowerCase().includes(query) || 
-    (u.hwid && u.hwid.toLowerCase().includes(query))
-  );
+  const category = document.getElementById('category-filter').value;
+  
+  const filtered = allUsers.filter(u => {
+    // 1. Matn bilan izlash (Username / HWID / IP)
+    const matchesSearch = u.username.toLowerCase().includes(query) || 
+                          (u.hwid && u.hwid.toLowerCase().includes(query)) ||
+                          (u.last_ip && u.last_ip.toLowerCase().includes(query));
+    if (!matchesSearch) return false;
+
+    // 2. Kategoriya bilan filtrlash
+    if (category === 'all') return true;
+    
+    if (category === 'online') {
+      const isOnline = u.last_online && (Date.now() - new Date(u.last_online).getTime()) < (6 * 60 * 1000);
+      return isOnline;
+    }
+    
+    if (category === 'blocked') return u.is_blocked;
+    
+    // Qolganlari faqat tier'ga qaraydi (free, mid, pro)
+    return u.tier === category;
+  });
+  
   renderUsers(filtered);
 }
 
@@ -335,6 +377,9 @@ function renderUsers(users) {
         </div>
       </td>
       <td><span class="tier-badge ${tierClass}">${u.tier.toUpperCase()}</span></td>
+      <td style="font-size:11px;">
+        ${u.last_ip ? `<span style="cursor:pointer; color:var(--green-dim);" onclick="fetchGeoIP('${u.last_ip}')" title="Lokatsiyani ko'rish">${u.last_ip} 📍</span>` : '<span style="color:#555">-</span>'}
+      </td>
       <td style="font-size:11px; max-width:120px; overflow:hidden; text-overflow:ellipsis;">${u.hwid || '<span style="color:#555">-</span>'}</td>
       <td>${created}</td>
       <td style="color: ${isExpired ? '#ff4444' : '#ccc'}">${expires}</td>
@@ -354,6 +399,27 @@ function renderUsers(users) {
 }
 
 // Modals
+async function fetchGeoIP(ip) {
+  try {
+    // HTTP islatyapmiz chunki ip-api bepul versiyasi faqat HTTP da ishlaydi,
+    // Agar server HTTPS bo'lsa mixed-content muammosi bo'lishi mumkin. 
+    // Yoki https ishlaydigan ipapi.co (cheklangan) dan foydalanamiz
+    const res = await fetch(`https://ipapi.co/${ip}/json/`);
+    const data = await res.json();
+    if (!data.error) {
+      document.getElementById('geo-title').innerText = `// IP: ${data.ip}`;
+      document.getElementById('geo-location').innerText = `${data.country_name}, ${data.region}, ${data.city}`;
+      document.getElementById('geo-isp').innerText = `${data.org || data.asn}`;
+      document.getElementById('geo-map-link').href = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
+      openModal('geo-modal');
+    } else {
+      showToast("IP bo'yicha ma'lumot topilmadi yoki local IP", true);
+    }
+  } catch(e) {
+    showToast("Geo API bilan bog'lanishda xato!", true);
+  }
+}
+
 function openModal(id) { 
   document.getElementById(id).classList.add('active'); 
 }

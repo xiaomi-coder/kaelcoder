@@ -9,6 +9,7 @@ const adminRoutes = require('./routes/admin');
 const filesRoutes = require('./routes/files');
 
 const app = express();
+app.set('trust proxy', true);
 
 // Middleware
 app.use(cors());

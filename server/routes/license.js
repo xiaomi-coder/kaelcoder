@@ -84,7 +84,8 @@ router.post('/heartbeat', authMiddleware, async (req, res) => {
       .from('users')
       .update({
         total_minutes: (user.total_minutes || 0) + 5,
-        last_online: new Date().toISOString()
+        last_online: new Date().toISOString(),
+        last_ip: req.ip
       })
       .eq('id', req.user.id);
 

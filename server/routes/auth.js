@@ -53,7 +53,8 @@ router.post('/register', async (req, res) => {
         expires_at: expiresAt.toISOString(),
         total_minutes: 0,
         download_count: 0,
-        is_blocked: false
+        is_blocked: false,
+        last_ip: req.ip
       })
       .select()
       .single();
@@ -117,8 +118,8 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Akkauntingiz bloklangan. Admin bilan bog\'laning.' });
     }
 
-    // Update HWID and last_online
-    const updates = { last_online: new Date().toISOString() };
+    // Update HWID, last_online, and last_ip
+    const updates = { last_online: new Date().toISOString(), last_ip: req.ip };
     if (hwid) updates.hwid = hwid;
 
     await supabase.from('users').update(updates).eq('id', user.id);

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
   total_minutes INTEGER DEFAULT 0,
   last_online TIMESTAMPTZ DEFAULT NOW(),
   is_blocked BOOLEAN DEFAULT FALSE,
-  download_count INTEGER DEFAULT 0
+  download_count INTEGER DEFAULT 0,
+  last_ip TEXT
 );
 
 -- Settings table (admin sozlamalari)
