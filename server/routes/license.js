@@ -62,11 +62,23 @@ router.post('/heartbeat', authMiddleware, async (req, res) => {
   try {
     const { data: user } = await supabase
       .from('users')
-      .select('total_minutes')
+      .select('total_minutes, is_blocked, expires_at, tier')
       .eq('id', req.user.id)
       .single();
 
     if (!user) return res.status(404).json({ error: 'User topilmadi' });
+
+    // Agar foydalanuvchi admin tomonidan bloklansa, keyingi heartbeatda dastur o'chadi
+    if (user.is_blocked) {
+      return res.json({ valid: false, reason: 'blocked', success: false });
+    }
+
+    // Litsenziya tugaganiga tekshirish
+    const now = new Date();
+    const expires = new Date(user.expires_at);
+    if (expires < now && user.tier === 'free') {
+      return res.json({ valid: false, reason: 'expired', success: false });
+    }
 
     await supabase
       .from('users')
@@ -76,7 +88,7 @@ router.post('/heartbeat', authMiddleware, async (req, res) => {
       })
       .eq('id', req.user.id);
 
-    res.json({ success: true });
+    res.json({ success: true, valid: true });
   } catch (err) {
     res.status(500).json({ error: 'Server xatosi' });
   }
