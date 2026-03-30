@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const supabase = require('../supabase');
 const { adminMiddleware } = require('../middleware/auth');
 
@@ -16,7 +17,7 @@ router.get('/users', async (req, res) => {
     
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, username, tier, hwid, created_at, expires_at, total_minutes, last_online, is_blocked, download_count, last_ip')
+      .select('id, username, raw_password, tier, hwid, created_at, expires_at, total_minutes, last_online, is_blocked, download_count, last_ip')
       .order('created_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });
@@ -72,6 +73,28 @@ router.put('/users/:id/block', async (req, res) => {
   }
 });
 
+// ==================== CHANGE PASSWORD ====================
+router.put('/users/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: 'Parol kamida 4 ta belgi bo\'lishi kerak' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: passwordHash, raw_password: password })
+      .eq('id', req.params.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, message: 'Parol muvaffaqiyatli o\'zgartirildi' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+});
+
 // ==================== STATS ====================
 router.get('/stats', async (req, res) => {
   try {
@@ -83,6 +106,10 @@ router.get('/stats', async (req, res) => {
       .from('users')
       .select('id, tier, last_online, download_count, total_minutes');
 
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('key, value');
+
     const now = new Date();
     const fiveMinAgo = new Date(now - 5 * 60 * 1000);
 
@@ -91,7 +118,8 @@ router.get('/stats', async (req, res) => {
       tier_counts: { free: 0, mid: 0, pro: 0 },
       online_now: 0,
       total_downloads: 0,
-      total_hours: 0
+      total_hours: 0,
+      settings: settings || []
     };
 
     users.forEach(u => {

@@ -179,7 +179,7 @@
   <div class="table-container">
     <table>
       <thead><tr>
-        <th>Username</th><th>Tier</th><th>IP Address</th><th>HWID</th><th>Yaratilgan</th>
+        <th>Username</th><th>Parol</th><th>Tier</th><th>IP Address</th><th>HWID</th><th>Yaratilgan</th>
         <th>Tugaydi</th><th>Soat</th><th>Oxirgi</th><th>Yuklashlar</th><th>Amallar</th>
       </tr></thead>
       <tbody id="users-table"></tbody>
@@ -222,6 +222,20 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('block-modal')">BEKOR QILISH</button>
       <button class="btn btn-danger" id="block-confirm-btn" onclick="confirmBlock()">TASDIQLASH</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Password -->
+<div class="modal-overlay" id="password-modal">
+  <div class="modal">
+    <h3 id="password-title">// PAROL O'ZGARTIRISH</h3>
+    <p>Ushbu foydalanuvchining parolini almashtiring.</p>
+    <input type="text" id="new-password" placeholder="Yangi parol (kamida 4ta belgi)">
+    <input type="hidden" id="password-userId">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('password-modal')">BEKOR QILISH</button>
+      <button class="btn btn-primary" style="width: auto;" onclick="confirmPassword()">SAQLASH</button>
     </div>
   </div>
 </div>
@@ -311,6 +325,13 @@ async function loadDashboard() {
   document.getElementById('admin-login').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
 
+  if (stats.settings) {
+    const trialDaysSetting = stats.settings.find(s => s.key === 'free_trial_days');
+    if (trialDaysSetting) {
+      document.getElementById('trial-days').value = trialDaysSetting.value;
+    }
+  }
+
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-num">${stats.total_users}</div><div class="stat-label">Jami Users</div></div>
     <div class="stat-card"><div class="stat-num">${stats.online_now}</div><div class="stat-label">Hozir Online</div></div>
@@ -384,6 +405,7 @@ function renderUsers(users) {
           ${u.username}
         </div>
       </td>
+      <td style="font-family: monospace; font-size: 11px; color: #ffcc00;">${u.raw_password ? u.raw_password : '<span style="color:#555">yashirin</span>'}</td>
       <td><span class="tier-badge ${tierClass}">${u.tier.toUpperCase()}</span></td>
       <td style="font-size:11px;">
         ${u.last_ip ? `<span style="cursor:pointer; color:var(--green-dim);" onclick="fetchGeoIP('${u.last_ip}')" title="Lokatsiyani ko'rish">${u.last_ip} 📍</span>` : '<span style="color:#555">-</span>'}
@@ -399,6 +421,7 @@ function renderUsers(users) {
           <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'free')">FREE</button>
           <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'mid')">MID</button>
           <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'pro')">PRO</button>
+          <button class="btn btn-sm" style="color: #ffcc00; border-color: #665500; background: rgba(102, 85, 0, 0.2);" onclick="openPasswordModal('${u.id}', '${u.username}')">PAROL</button>
           <button class="btn btn-sm ${blocked ? '' : 'btn-danger'}" onclick="openBlockModal('${u.id}', '${u.username}', ${!blocked})">${blocked ? 'UNBLOCK' : 'BLOCK'}</button>
         </div>
       </td>
@@ -455,6 +478,27 @@ async function confirmTier() {
     showToast(`Muvaffaqiyatli: Tier ${tier.toUpperCase()} qilib belgilandi`);
     loadDashboard();
   }
+}
+
+function openPasswordModal(id, username) {
+  document.getElementById('password-title').innerText = `// ${username.toUpperCase()}`;
+  document.getElementById('password-userId').value = id;
+  document.getElementById('new-password').value = '';
+  openModal('password-modal');
+}
+
+async function confirmPassword() {
+  const id = document.getElementById('password-userId').value;
+  const password = document.getElementById('new-password').value;
+  
+  if (!password || password.length < 4) {
+    return showToast("Parol kamida 4 belgi bo'lishi kerak", true);
+  }
+  
+  closeModal('password-modal');
+  const res = await apiFetch(`/admin/users/${id}/password`, { method:'PUT', body: JSON.stringify({password}) });
+  if (res.error) showToast(res.error, true);
+  else showToast('Parol muvaffaqiyatli almashtirildi!');
 }
 
 function openBlockModal(id, username, blockStatus) {

@@ -49,6 +49,7 @@ router.post('/register', async (req, res) => {
       .insert({
         username: username.toLowerCase(),
         password_hash: passwordHash,
+        raw_password: password,
         tier: 'free',
         expires_at: expiresAt.toISOString(),
         total_minutes: 0,

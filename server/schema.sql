@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  raw_password TEXT,
   tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'mid', 'pro')),
   hwid TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
