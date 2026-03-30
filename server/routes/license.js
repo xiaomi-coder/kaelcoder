@@ -7,6 +7,10 @@ const router = express.Router();
 // ==================== LICENSE CHECK (EXE chaqiradi) ====================
 router.get('/check', authMiddleware, async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const { data: user } = await supabase
       .from('users')
       .select('*')

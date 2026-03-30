@@ -10,6 +10,10 @@ router.use(adminMiddleware);
 // ==================== GET ALL USERS ====================
 router.get('/users', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const { data: users, error } = await supabase
       .from('users')
       .select('id, username, tier, hwid, created_at, expires_at, total_minutes, last_online, is_blocked, download_count, last_ip')
@@ -71,6 +75,10 @@ router.put('/users/:id/block', async (req, res) => {
 // ==================== STATS ====================
 router.get('/stats', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const { data: users } = await supabase
       .from('users')
       .select('id, tier, last_online, download_count, total_minutes');

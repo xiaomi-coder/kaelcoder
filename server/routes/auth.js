@@ -118,9 +118,16 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Akkauntingiz bloklangan. Admin bilan bog\'laning.' });
     }
 
-    // Update HWID, last_online, and last_ip
+    // HWID Check (Juda muhim: oldin doim yangilangan!)
+    if (hwid) {
+      if (user.hwid && user.hwid !== hwid) {
+        return res.status(403).json({ error: 'Boshqa kompyuterdan kirish mumkin emas (HWID xato)!' });
+      }
+    }
+
+    // Update HWID (faqat birinchi marta kiritilganda), last_online, and last_ip
     const updates = { last_online: new Date().toISOString(), last_ip: req.ip };
-    if (hwid) updates.hwid = hwid;
+    if (hwid && !user.hwid) updates.hwid = hwid;
 
     await supabase.from('users').update(updates).eq('id', user.id);
 
@@ -153,6 +160,10 @@ const { authMiddleware } = require('../middleware/auth');
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const { data: user } = await supabase
       .from('users')
       .select('id, username, tier, expires_at, total_minutes, last_online, created_at, download_count')

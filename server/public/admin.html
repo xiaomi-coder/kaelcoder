@@ -281,6 +281,14 @@ async function apiFetch(url, opts = {}) {
   if (!opts.headers) opts.headers = {};
   opts.headers['x-admin-key'] = ADMIN_KEY;
   opts.headers['Content-Type'] = 'application/json';
+  
+  if (!opts.method || opts.method.toUpperCase() === 'GET') {
+    url += (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+    opts.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    opts.headers['Pragma'] = 'no-cache';
+    opts.headers['Expires'] = '0';
+  }
+  
   try {
     const res = await fetch(API + url, opts);
     const data = await res.json();
