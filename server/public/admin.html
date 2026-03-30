@@ -186,6 +186,12 @@
     </table>
   </div>
 
+  <div id="pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 0 10px;">
+    <button class="btn" id="btn-prev" onclick="changePage(-1)">← OLINGI</button>
+    <span style="color: #88a888; font-size: 14px; font-weight: bold;">SAHIFA: <span id="page-info" style="color: var(--green)">1 / 1</span> &nbsp;|&nbsp; JAMI: <span id="total-users-info" style="color: var(--green)">0</span></span>
+    <button class="btn" id="btn-next" onclick="changePage(1)">KEYINGI →</button>
+  </div>
+
   <div class="settings-section">
     <div class="flex-row">
       <label>Yangi foydalanuvchi sinovi (kun):</label>
@@ -259,6 +265,10 @@
 const API = window.location.origin + '/api';
 let ADMIN_KEY = sessionStorage.getItem('shifthub_admin_key') || '';
 let allUsers = [];
+let currentPage = 1;
+let totalPages = 1;
+let currentLimit = 50;
+let searchTimeout = null;
 
 if (ADMIN_KEY) {
   loadDashboard();
@@ -345,39 +355,43 @@ async function loadDashboard() {
   loadUsers();
 }
 
-async function loadUsers() {
-  const data = await apiFetch('/admin/users');
+async function loadUsers(page = 1) {
+  currentPage = page;
+  const query = document.getElementById('search-input').value.trim();
+  const category = document.getElementById('category-filter').value;
+  
+  const url = `/admin/users?page=${currentPage}&limit=${currentLimit}&search=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`;
+  
+  const data = await apiFetch(url);
   if (data.error) return;
-  allUsers = data.users;
+  
+  allUsers = data.users || [];
+  totalPages = data.totalPages || 1;
+  const total = data.total || 0;
+  
+  // Update Pagination UI
+  document.getElementById('page-info').innerText = `${currentPage} / ${totalPages}`;
+  document.getElementById('total-users-info').innerText = total;
+  document.getElementById('btn-prev').style.opacity = currentPage <= 1 ? '0.5' : '1';
+  document.getElementById('btn-prev').style.pointerEvents = currentPage <= 1 ? 'none' : 'auto';
+  document.getElementById('btn-next').style.opacity = currentPage >= totalPages ? '0.5' : '1';
+  document.getElementById('btn-next').style.pointerEvents = currentPage >= totalPages ? 'none' : 'auto';
+
   renderUsers(allUsers);
 }
 
-function filterUsers() {
-  const query = document.getElementById('search-input').value.toLowerCase();
-  const category = document.getElementById('category-filter').value;
-  
-  const filtered = allUsers.filter(u => {
-    // 1. Matn bilan izlash (Username / HWID / IP)
-    const matchesSearch = u.username.toLowerCase().includes(query) || 
-                          (u.hwid && u.hwid.toLowerCase().includes(query)) ||
-                          (u.last_ip && u.last_ip.toLowerCase().includes(query));
-    if (!matchesSearch) return false;
+function changePage(dir) {
+  const newPage = currentPage + dir;
+  if (newPage >= 1 && newPage <= totalPages) {
+    loadUsers(newPage);
+  }
+}
 
-    // 2. Kategoriya bilan filtrlash
-    if (category === 'all') return true;
-    
-    if (category === 'online') {
-      const isOnline = u.last_online && (Date.now() - new Date(u.last_online).getTime()) < (6 * 60 * 1000);
-      return isOnline;
-    }
-    
-    if (category === 'blocked') return u.is_blocked;
-    
-    // Qolganlari faqat tier'ga qaraydi (free, mid, pro)
-    return u.tier === category;
-  });
-  
-  renderUsers(filtered);
+function filterUsers() {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    loadUsers(1);
+  }, 500); // 500ms o'ylab keyin serverga jo'natadi
 }
 
 function renderUsers(users) {

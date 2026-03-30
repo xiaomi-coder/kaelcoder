@@ -15,13 +15,39 @@ router.get('/users', async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    const { data: users, error } = await supabase
+    let { page = 1, limit = 50, search = '', category = 'all' } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
+
+    let query = supabase
       .from('users')
-      .select('id, username, raw_password, tier, hwid, created_at, expires_at, total_minutes, last_online, is_blocked, download_count, last_ip')
-      .order('created_at', { ascending: false });
+      .select('id, username, raw_password, tier, hwid, created_at, expires_at, total_minutes, last_online, is_blocked, download_count, last_ip', { count: 'exact' });
+
+    // Category Filter
+    if (category !== 'all') {
+      if (category === 'online') {
+        const sixMinsAgo = new Date(Date.now() - 6 * 60 * 1000).toISOString();
+        query = query.gte('last_online', sixMinsAgo);
+      } else if (category === 'blocked') {
+        query = query.eq('is_blocked', true);
+      } else {
+        query = query.eq('tier', category);
+      }
+    }
+
+    // Search Filter
+    if (search) {
+      query = query.or(`username.ilike.%${search}%,hwid.ilike.%${search}%,last_ip.ilike.%${search}%`);
+    }
+
+    const { data: users, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(start, end);
 
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ users, total: users.length });
+    res.json({ users, total: count, page, totalPages: Math.ceil((count || 0) / limit) });
   } catch (err) {
     res.status(500).json({ error: 'Server xatosi' });
   }
