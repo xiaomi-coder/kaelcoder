@@ -179,6 +179,16 @@
   .btn-primary:hover { background:#fff; box-shadow:0 0 40px var(--green); transform:translateY(-3px); }
   .btn-outline { background:transparent; color:var(--green); border:1px solid var(--green); clip-path:none; }
   .btn-outline:hover { background:rgba(0,255,65,0.1); box-shadow:0 0 20px rgba(0,255,65,0.2); transform:translateY(-3px); }
+  
+  .btn-telegram { background:var(--green); color:#000; font-weight:bold; font-size: 16px; padding: 18px 40px; display:inline-flex; align-items:center; gap: 10px; border-radius: 8px; clip-path: none; animation: pulse-tg 2s infinite; text-decoration: none; border: 2px solid transparent; transition: all 0.3s; margin-top: 10px; }
+  .btn-telegram:hover { background: #000; color: var(--green); border-color: var(--green); box-shadow: 0 0 30px rgba(0, 255, 65, 0.4); animation: none; transform: scale(1.05); }
+  @keyframes pulse-tg {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(0, 255, 65, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+  }
+  .tg-buy-container { text-align: center; margin: 40px 0 60px 0; padding: 40px; border: 1px dashed var(--green-dim); border-radius: 12px; background: rgba(0, 255, 65, 0.02); position: relative; }
+  .tg-buy-title { font-size: 24px; color: #fff; margin-bottom: 15px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
 
   .scroll-hint { position:absolute; bottom:32px; left:50%; transform:translateX(-50%); font-size:10px; letter-spacing:4px; color:var(--green-dim); animation:bounce 2s infinite; text-align:center; }
   @keyframes bounce { 0%,100% { transform:translateX(-50%) translateY(0); } 50% { transform:translateX(-50%) translateY(8px); } }
@@ -548,31 +558,39 @@
 
   <section id="buy">
     <p class="section-tag uz">Jarayon</p><p class="section-tag ru">Процесс</p>
-    <h2 class="section-title uz">QANDAY SOTIB OLISH</h2><h2 class="section-title ru">КАК КУПИТЬ</h2>
+    <h2 class="section-title uz">QANDAY SOTIB OLISH MUMKIN?</h2><h2 class="section-title ru">КАК КУПИТЬ?</h2>
+    
+    <div class="tg-buy-container">
+      <div class="tg-buy-title uz">To'lov va obuna jarayoni endi juda oson! 🚀</div>
+      <div class="tg-buy-title ru">Процесс оплаты и подписки теперь очень прост! 🚀</div>
+      <p class="step-desc uz" style="margin-bottom: 30px;">Biz platformamizdagi to'lovlarni to'liq avtomatlashtirdik. Endi siz bevosita rasmiy Telegram botimiz orqali tarifni tanlab, to'lovni amalga oshirishingiz va login-parolingizni soniyalar ichida olishingiz mumkin!</p>
+      <p class="step-desc ru" style="margin-bottom: 30px;">Мы полностью автоматизировали платежи на нашей платформе. Теперь вы можете выбрать тариф, произвести оплату и получить логин/пароль за секунды через нашего официального Telegram-бота!</p>
+      
+      <a href="https://t.me/shifthub_uz_bot" target="_blank" class="btn-telegram">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/></svg>
+        <span class="uz">TELEGRAM BOT ORQALI SOTIB OLISH</span>
+        <span class="ru">КУПИТЬ ЧЕРЕЗ TELEGRAM БОТ</span>
+      </a>
+    </div>
+
     <div class="steps">
       <div class="step">
         <div class="step-num">01</div>
-        <div class="step-title uz">RO'YXATDAN O'TING</div><div class="step-title ru">РЕГИСТРАЦИЯ</div>
-        <p class="step-desc uz">Saytda ro'yxatdan o'ting — login va parol yarating.</p>
-        <p class="step-desc ru">Зарегистрируйтесь на сайте — создайте логин и пароль.</p>
+        <div class="step-title uz">BOTGA KIRING</div><div class="step-title ru">ЗАЙДИТЕ В БОТ</div>
+        <p class="step-desc uz">Telegram botga kiring va o'zingizga qulay bo'lgan tarifni tanlang va avtomatik login-parol oling.</p>
+        <p class="step-desc ru">Зайдите в Telegram-бот, выберите тариф и получите логин-пароль автоматически.</p>
       </div>
       <div class="step">
         <div class="step-num">02</div>
         <div class="step-title uz">YUKLAB OLING</div><div class="step-title ru">СКАЧАЙТЕ</div>
-        <p class="step-desc uz">ShiftHub dasturini yuklab oling va o'rnating.</p>
-        <p class="step-desc ru">Скачайте и установите ShiftHub.</p>
+        <p class="step-desc uz">ShiftHub dasturini yuklab oling va kompyuterga o'rnating.</p>
+        <p class="step-desc ru">Скачайте и установите ShiftHub на ваш компьютер.</p>
       </div>
       <div class="step">
         <div class="step-num">03</div>
-        <div class="step-title uz">KIRING</div><div class="step-title ru">ВОЙДИТЕ</div>
-        <p class="step-desc uz">Dasturda login/parolingiz bilan kiring.</p>
-        <p class="step-desc ru">Войдите в программу с вашим логином/паролем.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">04</div>
         <div class="step-title uz">O'YNANG</div><div class="step-title ru">ИГРАЙТЕ</div>
-        <p class="step-desc uz">Dasturni ishga tushiring va o'yinda ustunlikka erishing!</p>
-        <p class="step-desc ru">Запустите программу и достигайте превосходства в игре!</p>
+        <p class="step-desc uz">Bot bergan ma'lumotlar bilan dasturga kiring va CS2'da ustunlikka erishing!</p>
+        <p class="step-desc ru">Войдите в программу с полученными данными и достигайте превосходства в игре!</p>
       </div>
     </div>
   </section>
