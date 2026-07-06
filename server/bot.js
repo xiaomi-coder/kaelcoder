@@ -141,6 +141,45 @@ function initBot() {
         bot.sendMessage(targetId, `❌ <b>Kechirasiz, sizning to'lov chekingiz qabul qilinmadi (rad etildi).</b>\nAgar xatolik bo'lsa admin bilan bog'laning.`, { parse_mode: 'HTML' });
       }
 
+      if (data === 'admin_users') {
+        if (userId !== ADMIN_ID) return;
+        try {
+          const result = await db.query(
+            `SELECT username, tier, expires_at, is_blocked FROM users ORDER BY created_at DESC LIMIT 15`
+          );
+          let text = `👥 <b>So'nggi 15 foydalanuvchi:</b>\n\n`;
+          result.rows.forEach(u => {
+            const exp = new Date(u.expires_at);
+            const expired = exp < new Date();
+            const status = u.is_blocked ? '🚫' : expired ? '❌' : '✅';
+            text += `${status} <code>${u.username}</code> — ${u.tier.toUpperCase()} | ${exp.toLocaleDateString()}\n`;
+          });
+          bot.sendMessage(ADMIN_ID, text, { parse_mode: 'HTML' });
+        } catch(e) {
+          bot.sendMessage(ADMIN_ID, `❌ Xato: ${e.message}`);
+        }
+      }
+
+      if (data === 'admin_adddays') {
+        if (userId !== ADMIN_ID) return;
+        bot.sendMessage(ADMIN_ID, `➕ <b>Vaqt qo'shish</b>\nFoydalanuvchiga kun qo'shish uchun quyidagi buyruqni yozing:\n<code>/adddays sh_ab12c3 10</code>`, { parse_mode: 'HTML' });
+      }
+
+      if (data === 'admin_block') {
+        if (userId !== ADMIN_ID) return;
+        bot.sendMessage(ADMIN_ID, `🚫 <b>Bloklash</b>\nFoydalanuvchini bloklash uchun quyidagi buyruqni yozing:\n<code>/block sh_ab12c3</code>`, { parse_mode: 'HTML' });
+      }
+
+      if (data === 'admin_stats') {
+        if (userId !== ADMIN_ID) return;
+        try {
+          const res = await db.query(`SELECT COUNT(*) as c FROM users`);
+          bot.sendMessage(ADMIN_ID, `📊 <b>Statistika</b>\n\nJami ro'yxatdan o'tgan foydalanuvchilar: <b>${res.rows[0].c}</b> ta.`, { parse_mode: 'HTML' });
+        } catch(e) {
+          bot.sendMessage(ADMIN_ID, `❌ Xato: ${e.message}`);
+        }
+      }
+
       if (data === 'myaccount') {
         bot.sendMessage(chatId,
           `👤 <b>Akkaunt ma'lumotlari</b>\n\n` +
@@ -162,7 +201,7 @@ function initBot() {
     }
   });
 
-  // ==================== Messages (Live Support / Forwarding) ====================
+  // ==================== Messages (Live Support / Forwarding / Receipt) ====================
   bot.on('message', async (msg) => {
     try {
       if (msg.text && msg.text.startsWith('/')) return; // Komandalarni o'tkazib yuborish
@@ -170,15 +209,38 @@ function initBot() {
 
       const userId = msg.from.id;
 
-      // Agar xabar admindan kelsa va u reply qilgan bo'lsa, foydalanuvchiga javob yuboramiz
-      if (userId === ADMIN_ID) {
-        if (msg.reply_to_message && msg.reply_to_message.forward_from) {
+      // 1. Agar rasm/chek yuborilgan bo'lsa (pending order mavjud bo'lsa barchaga, hatto adminga ham ishlaydi)
+      if (msg.photo || msg.document) {
+        const pendingRes = await db.query(`SELECT * FROM pending_orders WHERE telegram_user_id = $1 AND status = 'pending'`, [userId]);
+        if (pendingRes.rows.length > 0) {
+          const order = pendingRes.rows[0];
+          
+          if (!isNaN(ADMIN_ID)) {
+            bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id, {
+              caption: `🔔 <b>Yangi to'lov cheki!</b>\n\n👤 Foydalanuvchi: @${msg.from.username || '—'} (ID: <code>${userId}</code>)\n📦 <b>Muddat:</b> ${order.days} kun\n💰 <b>Summa:</b> ${order.amount} so'm`,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "✅ Tasdiqlash va Parol berish", callback_data: `admin_confirm_${userId}_${order.days}` }],
+                  [{ text: "❌ Rad etish", callback_data: `admin_reject_${userId}` }]
+                ]
+              }
+            }).catch(() => {});
+          }
+          bot.sendMessage(msg.chat.id, "✅ <b>Chek adminga yuborildi.</b>\nIltimos, tasdiqlanishini kuting (odatda 5-10 daqiqa).", { parse_mode: 'HTML' });
+          return;
+        }
+      }
+
+      // 2. Agar xabar admindan kelsa va u qandaydir mijozga reply qilgan bo'lsa
+      if (userId === ADMIN_ID && msg.reply_to_message) {
+        if (msg.reply_to_message.forward_from) {
           const targetId = msg.reply_to_message.forward_from.id;
           bot.copyMessage(targetId, msg.chat.id, msg.message_id).catch(() => {
              bot.sendMessage(ADMIN_ID, "❌ Mijozga xabar yuborib bo'lmadi (balki botni bloklagan).");
           });
           return;
-        } else if (msg.reply_to_message && msg.reply_to_message.text) {
+        } else if (msg.reply_to_message.text) {
           const textMatches = msg.reply_to_message.text.match(/ID:\s(\d+)/);
           if (textMatches && textMatches[1]) {
              const targetId = parseInt(textMatches[1]);
@@ -186,45 +248,39 @@ function initBot() {
              return;
           }
         }
-      } else {
-        // Oddiy mijoz yozmoqda
-        
-        // Agar rasm yuborayotgan bo'lsa (Chek bo'lishi mumkin)
-        if (msg.photo || msg.document) {
-          const pendingRes = await db.query(`SELECT * FROM pending_orders WHERE telegram_user_id = $1 AND status = 'pending'`, [userId]);
-          if (pendingRes.rows.length > 0) {
-            const order = pendingRes.rows[0];
-            
-            // Adminga tasdiqlash uchun inline tugmalar bilan rasm yuboramiz
-            if (!isNaN(ADMIN_ID)) {
-              bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id, {
-                caption: `🔔 <b>Yangi to'lov cheki!</b>\n\n👤 Foydalanuvchi: @${msg.from.username || '—'} (ID: <code>${userId}</code>)\n📦 <b>Muddat:</b> ${order.days} kun\n💰 <b>Summa:</b> ${order.amount} so'm`,
-                parse_mode: 'HTML',
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: "✅ Tasdiqlash va Parol berish", callback_data: `admin_confirm_${userId}_${order.days}` }],
-                    [{ text: "❌ Rad etish", callback_data: `admin_reject_${userId}` }]
-                  ]
-                }
-              }).catch(() => {});
-            }
-            bot.sendMessage(msg.chat.id, "✅ <b>Chek adminga yuborildi.</b>\nIltimos, tasdiqlanishini kuting (odatda 5-10 daqiqa).", { parse_mode: 'HTML' });
-            return;
-          }
-        }
-
-        // Agar oddiy xabar (yoki rasm, lekin pending order yo'q bo'lsa), yordam tariqasida forward qilamiz
-        if (!isNaN(ADMIN_ID)) {
-          bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
-            bot.sendMessage(ADMIN_ID, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' });
-            bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
-          });
-        }
       }
+
+      // 3. Qolgan holatlarda: Oddiy mijoz yozmoqda (rasm yoki text), forward qilamiz
+      if (userId !== ADMIN_ID && !isNaN(ADMIN_ID)) {
+        bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
+          bot.sendMessage(ADMIN_ID, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' });
+          bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
+        });
+      }
+
     } catch(e) {
       console.error('[Bot] message error:', e);
     }
   });
+
+  // ==================== Admin Panel: /admin ====================
+  bot.onText(/\/admin/, (msg) => {
+    if (msg.from.id !== ADMIN_ID) return;
+    bot.sendMessage(msg.chat.id, 
+      `🛡 <b>Admin Panel</b>\nQuyidagi tugmalardan birini tanlang:`, 
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "👥 So'nggi foydalanuvchilar", callback_data: 'admin_users' }],
+            [{ text: "➕ Vaqt qo'shish", callback_data: 'admin_adddays' }, { text: "🚫 Bloklash", callback_data: 'admin_block' }],
+            [{ text: "📊 Statistika (tez kunda)", callback_data: 'admin_stats' }]
+          ]
+        }
+      }
+    );
+  });
+
 
   // ==================== Admin: /confirm <userId> <days> ====================
   bot.onText(/\/confirm (\d+) (\d+)/, async (msg, match) => {
