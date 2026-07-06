@@ -3,11 +3,13 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./db');
+const { initBot } = require('./bot');
 
 const authRoutes = require('./routes/auth');
 const licenseRoutes = require('./routes/license');
 const adminRoutes = require('./routes/admin');
 const filesRoutes = require('./routes/files');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 app.set('trust proxy', true);
@@ -24,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/license', licenseRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/files', filesRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -64,5 +67,7 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`[ShiftHub] Server running on port ${PORT}`);
+  // Botni ishga tushirish
+  initBot();
 });
 
