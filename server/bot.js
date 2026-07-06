@@ -37,17 +37,17 @@ function initBot() {
     const name = msg.from.first_name || 'Do\'st';
 
     bot.sendMessage(chatId,
-      `🎮 *ShiftHub CS2 — Sotib olish boti*\n\n` +
-      `Salom, *${name}*! 👋\n\n` +
+      `🎮 <b>ShiftHub CS2 — Sotib olish boti</b>\n\n` +
+      `Salom, <b>${name}</b>! 👋\n\n` +
       `Counter-Strike 2 uchun PRO cheat dasturi.\n` +
       `ESP • Aimbot • BHop • Triggerbot • va boshqalar\n\n` +
-      `📦 *Obuna narxlari:*\n` +
-      `☀️ Kunlik — *5,000 so'm* (1 kun)\n` +
-      `📅 Haftalik — *25,000 so'm* (7 kun)\n` +
-      `🏆 Oylik — *70,000 so'm* (30 kun)\n\n` +
+      `📦 <b>Obuna narxlari:</b>\n` +
+      `☀️ Kunlik — <b>5,000 so'm</b> (1 kun)\n` +
+      `📅 Haftalik — <b>25,000 so'm</b> (7 kun)\n` +
+      `🏆 Oylik — <b>70,000 so'm</b> (30 kun)\n\n` +
       `👇 Birini tanlang:`,
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: "☀️ Kunlik — 5,000 so'm", callback_data: 'buy_daily' }],
@@ -88,45 +88,45 @@ function initBot() {
         }
 
         bot.sendMessage(chatId,
-          `✅ *${plan.label}* tanlandi!\n\n` +
-          `💰 *To'lov miqdori:* ${plan.amount.toLocaleString()} so'm\n` +
-          `📅 *Obuna muddati:* ${plan.days} kun\n\n` +
+          `✅ <b>${plan.label}</b> tanlandi!\n\n` +
+          `💰 <b>To'lov miqdori:</b> ${plan.amount.toLocaleString()} so'm\n` +
+          `📅 <b>Obuna muddati:</b> ${plan.days} kun\n\n` +
           `━━━━━━━━━━━━━━━━━━\n` +
-          `💳 *Karta raqami:*\n\`${PAYMENT_CARD}\`\n` +
+          `💳 <b>Karta raqami:</b>\n<code>${PAYMENT_CARD}</code>\n` +
           `━━━━━━━━━━━━━━━━━━\n\n` +
-          `📸 To'lovdan so'ng *chek (screenshot)*ni shu chatga yuboring.\n` +
+          `📸 To'lovdan so'ng <b>chek (screenshot)</b>ni shu chatga yuboring.\n` +
           `Admin tekshirib, akkaunt yuboradi (odatda 5-10 daqiqa).\n\n` +
           `Yoki bot orqali savol yozishingiz mumkin.`,
-          { parse_mode: 'Markdown' }
+          { parse_mode: 'HTML' }
         );
 
         if (!isNaN(ADMIN_ID)) {
           bot.sendMessage(ADMIN_ID,
-            `🔔 *Yangi buyurtma!*\n\n` +
-            `👤 Foydalanuvchi: @${username} (ID: \`${userId}\`)\n` +
-            `📦 *Obuna:* ${plan.label}\n` +
-            `📅 *Muddat:* ${plan.days} kun\n\n` +
-            `✅ *Tasdiqlash uchun (pul tushgach):*\n` +
+            `🔔 <b>Yangi buyurtma!</b>\n\n` +
+            `👤 Foydalanuvchi: @${username} (ID: <code>${userId}</code>)\n` +
+            `📦 <b>Obuna:</b> ${plan.label}\n` +
+            `📅 <b>Muddat:</b> ${plan.days} kun\n\n` +
+            `✅ <b>Tasdiqlash uchun (pul tushgach):</b>\n` +
             `/confirm ${userId} ${plan.days}`,
-            { parse_mode: 'Markdown' }
+            { parse_mode: 'HTML' }
           );
         }
       }
 
       if (data === 'myaccount') {
         bot.sendMessage(chatId,
-          `👤 *Akkaunt ma'lumotlari*\n\n` +
+          `👤 <b>Akkaunt ma'lumotlari</b>\n\n` +
           `🌐 Akkauntingizni tekshirish uchun:\n` +
-          `[www.shifthub.uz](https://www.shifthub.uz) → *LOGIN* tugmasi`,
-          { parse_mode: 'Markdown', disable_web_page_preview: true }
+          `<a href="https://www.shifthub.uz">www.shifthub.uz</a> → <b>LOGIN</b> tugmasi`,
+          { parse_mode: 'HTML', disable_web_page_preview: true }
         );
       }
 
       if (data === 'help') {
         bot.sendMessage(chatId,
-          `📞 *Admin bilan bog'lanish*\n\n` +
+          `📞 <b>Admin bilan bog'lanish</b>\n\n` +
           `Pastdagi maydonga o'z savolingizni yoki muammongizni yozing. Xabaringiz to'g'ridan-to'g'ri adminga yuboriladi va u shu bot orqali sizga javob qaytaradi! 👇`,
-          { parse_mode: 'Markdown' }
+          { parse_mode: 'HTML' }
         );
       }
     } catch (e) {
@@ -166,7 +166,7 @@ function initBot() {
           // Xabarni adminga forward qilamiz (shunda admin reply qila oladi)
           bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
             // Ba'zi hollarda privacy sozlamalari tufayli forward ishlamaydi, shu sababli matnni uzatamiz
-            bot.sendMessage(ADMIN_ID, `📩 *Mijozdan xabar*\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'Markdown' });
+            bot.sendMessage(ADMIN_ID, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' });
             bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
           });
         }
@@ -203,11 +203,11 @@ function initBot() {
       );
 
       if (result.rows.length === 0) {
-        return bot.sendMessage(msg.chat.id, `❌ \`${uname}\` topilmadi!`, { parse_mode: 'Markdown' });
+        return bot.sendMessage(msg.chat.id, `❌ <code>${uname}</code> topilmadi!`, { parse_mode: 'HTML' });
       }
 
       const exp = new Date(result.rows[0].expires_at).toLocaleDateString('uz-UZ');
-      bot.sendMessage(msg.chat.id, `✅ \`${uname}\` ga *${days}* kun qo'shildi!\nTugash: *${exp}*`, { parse_mode: 'Markdown' });
+      bot.sendMessage(msg.chat.id, `✅ <code>${uname}</code> ga <b>${days}</b> kun qo'shildi!\nTugash: <b>${exp}</b>`, { parse_mode: 'HTML' });
     } catch(e) {
       bot.sendMessage(msg.chat.id, `❌ Xato: ${e.message}`);
     }
@@ -219,7 +219,7 @@ function initBot() {
     const uname = match[1].toLowerCase();
     try {
       await db.query(`UPDATE users SET is_blocked = true WHERE username = $1`, [uname]);
-      bot.sendMessage(msg.chat.id, `🚫 \`${uname}\` bloklandi!`, { parse_mode: 'Markdown' });
+      bot.sendMessage(msg.chat.id, `🚫 <code>${uname}</code> bloklandi!`, { parse_mode: 'HTML' });
     } catch(e) {
       bot.sendMessage(msg.chat.id, `❌ Xato: ${e.message}`);
     }
@@ -232,14 +232,14 @@ function initBot() {
       const result = await db.query(
         `SELECT username, tier, expires_at, is_blocked FROM users ORDER BY created_at DESC LIMIT 15`
       );
-      let text = `👥 *So'nggi 15 foydalanuvchi:*\n\n`;
+      let text = `👥 <b>So'nggi 15 foydalanuvchi:</b>\n\n`;
       result.rows.forEach(u => {
         const exp = new Date(u.expires_at);
         const expired = exp < new Date();
         const status = u.is_blocked ? '🚫' : expired ? '❌' : '✅';
-        text += `${status} \`${u.username}\` — ${u.tier.toUpperCase()} | ${exp.toLocaleDateString()}\n`;
+        text += `${status} <code>${u.username}</code> — ${u.tier.toUpperCase()} | ${exp.toLocaleDateString()}\n`;
       });
-      bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+      bot.sendMessage(msg.chat.id, text, { parse_mode: 'HTML' });
     } catch(e) {
       bot.sendMessage(msg.chat.id, `❌ Xato: ${e.message}`);
     }
@@ -249,13 +249,13 @@ function initBot() {
   bot.onText(/\/help/, (msg) => {
     if (msg.from.id !== ADMIN_ID) return;
     bot.sendMessage(msg.chat.id,
-      `🛠 *Admin buyruqlari:*\n\n` +
-      `/confirm <telegram_id> <kunlar> — Akkaunt yaratish\n` +
-      `/adddays <username> <kunlar> — Kunlar qo'shish\n` +
-      `/block <username> — Bloklash\n` +
+      `🛠 <b>Admin buyruqlari:</b>\n\n` +
+      `/confirm &lt;telegram_id&gt; &lt;kunlar&gt; — Akkaunt yaratish\n` +
+      `/adddays &lt;username&gt; &lt;kunlar&gt; — Kunlar qo'shish\n` +
+      `/block &lt;username&gt; — Bloklash\n` +
       `/users — So'nggi foydalanuvchilar\n` +
       `/help — Bu xabar`,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     );
   });
 
@@ -288,25 +288,25 @@ async function createAccount(bot, telegramUserId, days, adminChatId) {
     const expStr = expiresAt.toLocaleDateString('uz-UZ');
 
     await b.sendMessage(telegramUserId,
-      `🎉 *To'lov tasdiqlandi! Akkauntingiz tayyor!*\n\n` +
-      `🎮 *ShiftHub CS2 Cheat — PRO*\n\n` +
+      `🎉 <b>To'lov tasdiqlandi! Akkauntingiz tayyor!</b>\n\n` +
+      `🎮 <b>ShiftHub CS2 Cheat — PRO</b>\n\n` +
       `━━━━━━━━━━━━━━━━━━\n` +
-      `🔑 *Login:* \`${username}\`\n` +
-      `🔐 *Parol:* \`${password}\`\n` +
+      `🔑 <b>Login:</b> <code>${username}</code>\n` +
+      `🔐 <b>Parol:</b> <code>${password}</code>\n` +
       `━━━━━━━━━━━━━━━━━━\n\n` +
-      `📅 Tugash sanasi: *${expStr}* (${days} kun)\n\n` +
-      `📥 *Yuklab olish:*\n` +
-      `1. [www.shifthub.uz](https://www.shifthub.uz) → *YUKLAB OLISH* tugmasi\n` +
+      `📅 Tugash sanasi: <b>${expStr}</b> (${days} kun)\n\n` +
+      `📥 <b>Yuklab olish:</b>\n` +
+      `1. <a href="https://www.shifthub.uz">www.shifthub.uz</a> → <b>YUKLAB OLISH</b> tugmasi\n` +
       `2. Yoki to'g'ridan dasturga login qiling\n\n` +
       `⚠️ Login va parolni boshqa joyda ham saqlang!\n` +
-      `❓ Muammo bo'lsa: @bakoev_me`,
-      { parse_mode: 'Markdown', disable_web_page_preview: true }
+      `❓ Muammo bo'lsa yozishingiz mumkin.`,
+      { parse_mode: 'HTML', disable_web_page_preview: true }
     );
 
     if (adminChatId) {
       b.sendMessage(adminChatId,
-        `✅ Akkaunt yaratildi!\n\`${username}\` — ${days} kun`,
-        { parse_mode: 'Markdown' }
+        `✅ Akkaunt yaratildi!\n<code>${username}</code> — ${days} kun`,
+        { parse_mode: 'HTML' }
       );
     }
 
