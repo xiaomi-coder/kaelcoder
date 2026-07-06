@@ -426,21 +426,16 @@
     <h2 class="section-title reveal">STATISTIKA</h2>
     <div class="stats-grid">
       <div class="stat-card reveal reveal-delay-1">
-        <span class="stat-icon">👥</span>
-        <span class="stat-number" id="stat-total">0</span>
-        <span class="stat-label uz">Jami foydalanuvchi</span><span class="stat-label ru">Всего пользователей</span>
-      </div>
-      <div class="stat-card reveal reveal-delay-2">
         <span class="stat-icon">🟢</span>
         <span class="stat-number" id="stat-online">0</span>
         <span class="stat-label"><span class="stat-live"></span>ONLINE HOZIR</span>
       </div>
-      <div class="stat-card reveal reveal-delay-3">
+      <div class="stat-card reveal reveal-delay-2">
         <span class="stat-icon">📥</span>
         <span class="stat-number" id="stat-downloads">0</span>
         <span class="stat-label uz">Yuklamalar</span><span class="stat-label ru">Загрузки</span>
       </div>
-      <div class="stat-card reveal reveal-delay-4">
+      <div class="stat-card reveal reveal-delay-3">
         <span class="stat-icon">⚡</span>
         <span class="stat-number" id="stat-uptime">99.9%</span>
         <span class="stat-label">UPTIME</span>
@@ -996,32 +991,63 @@ updateNavAuth();
 /* ============ LIVE STATS COUNTER ============ */
 function animateCount(el, target, duration, suffix) {
   const start = performance.now();
+  const from = parseInt(el.textContent) || 0;
   function step(now) {
     const p = Math.min((now - start) / duration, 1);
     const eased = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.floor(eased * target) + (suffix || '');
+    el.textContent = Math.floor(from + eased * (target - from)) + (suffix || '');
     if (p < 1) requestAnimationFrame(step);
     else el.textContent = target + (suffix || '');
   }
   requestAnimationFrame(step);
 }
 
-(async function loadStats() {
-  try {
-    const res = await fetch('/api/stats/public');
-    const data = await res.json();
-    const totalEl = document.getElementById('stat-total');
-    const onlineEl = document.getElementById('stat-online');
-    const downloadsEl = document.getElementById('stat-downloads');
-    const uptimeEl = document.getElementById('stat-uptime');
-    if (totalEl) animateCount(totalEl, data.total_users, 2000);
-    if (onlineEl) animateCount(onlineEl, data.online_now, 1500);
-    if (downloadsEl) animateCount(downloadsEl, data.total_downloads, 2500);
-    if (uptimeEl) uptimeEl.textContent = data.uptime;
-  } catch(e) {
-    const totalEl = document.getElementById('stat-total');
-    if (totalEl) animateCount(totalEl, 457, 2000);
+
+/* Online raqam: 200-600 orasida tasodifiy, har 2-3 daqiqada o'zgaradi */
+(function initOnlineCounter() {
+  const onlineEl = document.getElementById('stat-online');
+  const downloadsEl = document.getElementById('stat-downloads');
+  const uptimeEl = document.getElementById('stat-uptime');
+
+  function randOnline() {
+    // 200-600 orasida, 10 ga bo'linadigan son
+    return Math.floor(Math.random() * 41) * 10 + 200;
   }
+
+  // Boshlang'ich qiymat
+  let currentOnline = randOnline();
+  if (onlineEl) animateCount(onlineEl, currentOnline, 2000);
+
+  // Real yuklamalar va uptime API dan
+  (async function() {
+    try {
+      const res = await fetch('/api/stats/public');
+      const data = await res.json();
+      if (downloadsEl) animateCount(downloadsEl, data.total_downloads, 2500);
+      if (uptimeEl) uptimeEl.textContent = data.uptime;
+    } catch(e) {
+      if (downloadsEl) animateCount(downloadsEl, 1284, 2500);
+    }
+  })();
+
+  // Har 2-3 daqiqada online sonini o'zgartir
+  function scheduleNext() {
+    const delay = (120 + Math.random() * 60) * 1000; // 2-3 daqiqa
+    setTimeout(() => {
+      const prev = currentOnline;
+      // Avvalgidan juda katta farq qilmasin: +-30-80 orasida o'zgar
+      let delta = Math.floor(Math.random() * 51 + 30) * (Math.random() > 0.5 ? 1 : -1);
+      let next = prev + delta;
+      // 200-600 chegarasida ushlab tur
+      next = Math.max(200, Math.min(600, next));
+      // 10 ga yaxlashtiramiz
+      next = Math.round(next / 10) * 10;
+      currentOnline = next;
+      if (onlineEl) animateCount(onlineEl, currentOnline, 1500);
+      scheduleNext();
+    }, delay);
+  }
+  scheduleNext();
 })();
 
 /* ============ 3D TILT ON PRICING CARDS ============ */
