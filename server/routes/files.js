@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const supabase = require('../supabase');
+const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,16 +9,7 @@ const router = express.Router();
 router.get('/exe', authMiddleware, async (req, res) => {
   try {
     // Increment download count
-    const { data: user } = await supabase
-      .from('users')
-      .select('download_count')
-      .eq('id', req.user.id)
-      .single();
-
-    await supabase
-      .from('users')
-      .update({ download_count: (user?.download_count || 0) + 1 })
-      .eq('id', req.user.id);
+    await db.query('UPDATE users SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1', [req.user.id]);
 
     // Send EXE file
     const filePath = path.join(__dirname, '..', 'files', 'formehub.exe');

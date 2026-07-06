@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const supabase = require('../supabase');
+const db = require('../db');
 
 const router = express.Router();
 
@@ -18,14 +18,12 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username 3+, password 4+ belgi bo\'lishi kerak' });
     }
 
-    // Check if username exists
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', username.toLowerCase())
-      .single();
+    const uname = username.toLowerCase();
 
-    if (existing) {
+    // Check if username exists
+    const existing = await db.query('SELECT id FROM users WHERE username = $1', [uname]);
+
+    if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Bu username band' });
     }
 
@@ -33,37 +31,20 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Get free trial days from settings
-    const { data: settings } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'free_trial_days')
-      .single();
+    const settings = await db.query('SELECT value FROM settings WHERE key = $1', ['free_trial_days']);
 
-    const trialDays = settings ? parseInt(settings.value) : 10;
+    const trialDays = settings.rows.length > 0 ? parseInt(settings.rows[0].value) : 10;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + trialDays);
 
     // Insert user
-    const { data: user, error } = await supabase
-      .from('users')
-      .insert({
-        username: username.toLowerCase(),
-        password_hash: passwordHash,
-        raw_password: password,
-        tier: 'free',
-        expires_at: expiresAt.toISOString(),
-        total_minutes: 0,
-        download_count: 0,
-        is_blocked: false,
-        last_ip: req.ip
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Register error:', error);
-      return res.status(500).json({ error: 'Server xatosi' });
-    }
+    const insertResult = await db.query(
+      `INSERT INTO users 
+      (username, password_hash, raw_password, tier, expires_at, total_minutes, download_count, is_blocked, last_ip) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [uname, passwordHash, password, 'free', expiresAt.toISOString(), 0, 0, false, req.ip]
+    );
+    const user = insertResult.rows[0];
 
     // Generate JWT
     const token = jwt.sign(
@@ -98,15 +79,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username.toLowerCase())
-      .single();
+    const userResult = await db.query('SELECT * FROM users WHERE username = $1', [username.toLowerCase()]);
 
-    if (!user || error) {
+    if (userResult.rows.length === 0) {
       return res.status(401).json({ error: 'Username yoki password noto\'g\'ri' });
     }
+    const user = userResult.rows[0];
 
     // Check password
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -127,10 +105,13 @@ router.post('/login', async (req, res) => {
     }
 
     // Update HWID (faqat birinchi marta kiritilganda), last_online, and last_ip
-    const updates = { last_online: new Date().toISOString(), last_ip: req.ip };
-    if (hwid && !user.hwid) updates.hwid = hwid;
-
-    await supabase.from('users').update(updates).eq('id', user.id);
+    const lastOnline = new Date().toISOString();
+    
+    if (hwid && !user.hwid) {
+      await db.query('UPDATE users SET last_online = $1, last_ip = $2, hwid = $3 WHERE id = $4', [lastOnline, req.ip, hwid, user.id]);
+    } else {
+      await db.query('UPDATE users SET last_online = $1, last_ip = $2 WHERE id = $3', [lastOnline, req.ip, user.id]);
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -165,15 +146,11 @@ router.get('/me', authMiddleware, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, username, tier, expires_at, total_minutes, last_online, created_at, download_count')
-      .eq('id', req.user.id)
-      .single();
+    const userResult = await db.query('SELECT id, username, tier, expires_at, total_minutes, last_online, created_at, download_count FROM users WHERE id = $1', [req.user.id]);
 
-    if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+    if (userResult.rows.length === 0) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
 
-    res.json({ user });
+    res.json({ user: userResult.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Server xatosi' });
   }

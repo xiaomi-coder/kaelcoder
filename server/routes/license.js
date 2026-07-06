@@ -1,5 +1,5 @@
 const express = require('express');
-const supabase = require('../supabase');
+const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,13 +11,10 @@ router.get('/check', authMiddleware, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', req.user.id)
-      .single();
+    const userResult = await db.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
 
-    if (!user) return res.status(404).json({ error: 'User topilmadi' });
+    if (userResult.rows.length === 0) return res.status(404).json({ error: 'User topilmadi' });
+    const user = userResult.rows[0];
 
     // Check blocked
     if (user.is_blocked) {
@@ -64,13 +61,10 @@ router.get('/check', authMiddleware, async (req, res) => {
 // ==================== HEARTBEAT (har 5 daqiqada) ====================
 router.post('/heartbeat', authMiddleware, async (req, res) => {
   try {
-    const { data: user } = await supabase
-      .from('users')
-      .select('total_minutes, is_blocked, expires_at, tier')
-      .eq('id', req.user.id)
-      .single();
+    const userResult = await db.query('SELECT total_minutes, is_blocked, expires_at, tier FROM users WHERE id = $1', [req.user.id]);
 
-    if (!user) return res.status(404).json({ error: 'User topilmadi' });
+    if (userResult.rows.length === 0) return res.status(404).json({ error: 'User topilmadi' });
+    const user = userResult.rows[0];
 
     // Agar foydalanuvchi admin tomonidan bloklansa, keyingi heartbeatda dastur o'chadi
     if (user.is_blocked) {
@@ -84,14 +78,11 @@ router.post('/heartbeat', authMiddleware, async (req, res) => {
       return res.json({ valid: false, reason: 'expired', success: false });
     }
 
-    await supabase
-      .from('users')
-      .update({
-        total_minutes: (user.total_minutes || 0) + 5,
-        last_online: new Date().toISOString(),
-        last_ip: req.ip
-      })
-      .eq('id', req.user.id);
+    const lastOnline = new Date().toISOString();
+    await db.query(
+      'UPDATE users SET total_minutes = $1, last_online = $2, last_ip = $3 WHERE id = $4',
+      [(user.total_minutes || 0) + 5, lastOnline, req.ip, req.user.id]
+    );
 
     res.json({ success: true, valid: true });
   } catch (err) {
