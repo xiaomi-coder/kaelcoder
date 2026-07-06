@@ -94,6 +94,7 @@
   :root {
     --green: #00ff41; --green-dim: #00cc33; --green-dark: #003b00;
     --green-glow: rgba(0,255,65,0.3); --bg: #000000; --bg2: #020d02;
+    --cyan: #00eeff; --purple: #bf00ff;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -231,6 +232,84 @@
   .uz { display:block; } .ru { display:none; }
   body.ru-mode .uz { display:none; } body.ru-mode .ru { display:block; }
 
+  /* ===================== SCROLL REVEAL ===================== */
+  .reveal { opacity:0; transform:translateY(40px); transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+  .reveal-left { opacity:0; transform:translateX(-50px); transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal-left.visible { opacity:1; transform:translateX(0); }
+  .reveal-right { opacity:0; transform:translateX(50px); transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal-right.visible { opacity:1; transform:translateX(0); }
+  .reveal-delay-1 { transition-delay:0.1s; } .reveal-delay-2 { transition-delay:0.2s; }
+  .reveal-delay-3 { transition-delay:0.3s; } .reveal-delay-4 { transition-delay:0.4s; }
+  .reveal-delay-5 { transition-delay:0.5s; } .reveal-delay-6 { transition-delay:0.6s; }
+
+  /* ===================== STATS SECTION ===================== */
+  #stats { position:relative; z-index:10; padding:80px 80px; }
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:20px; }
+  .stat-card {
+    background:var(--bg2); border:1px solid var(--green-dark); padding:28px 20px; text-align:center;
+    position:relative; overflow:hidden; transition:all 0.4s;
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  }
+  .stat-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 0%, rgba(0,255,65,0.06) 0%, transparent 60%);
+    transition:opacity 0.4s;
+  }
+  .stat-card:hover { border-color:var(--green); box-shadow:0 0 30px rgba(0,255,65,0.15); transform:translateY(-4px); }
+  .stat-card:hover::before { opacity:2; }
+  .stat-icon { font-size:28px; margin-bottom:10px; display:block; }
+  .stat-number {
+    font-family:'Orbitron',monospace; font-size:36px; font-weight:900; color:var(--green);
+    text-shadow:0 0 20px var(--green), 0 0 40px rgba(0,255,65,0.3); line-height:1;
+    display:block; margin-bottom:6px;
+  }
+  .stat-label { font-size:10px; letter-spacing:4px; color:var(--green-dim); text-transform:uppercase; }
+  .stat-live { display:inline-block; width:6px; height:6px; background:var(--green); border-radius:50%; margin-right:6px; animation:live-pulse 1.5s infinite; vertical-align:middle; }
+  @keyframes live-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(0,255,65,0.6); } 50% { box-shadow:0 0 0 6px rgba(0,255,65,0); } }
+
+  /* ===================== FAQ SECTION ===================== */
+  #faq { position:relative; z-index:10; padding:100px 80px; }
+  .faq-list { max-width:760px; display:flex; flex-direction:column; gap:8px; }
+  .faq-item { border:1px solid var(--green-dark); overflow:hidden; transition:border-color 0.3s; }
+  .faq-item.open { border-color:rgba(0,255,65,0.4); }
+  .faq-q {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 22px; cursor:pointer; font-size:13px; letter-spacing:2px; color:var(--green-dim);
+    transition:color 0.3s; user-select:none;
+  }
+  .faq-item.open .faq-q { color:var(--green); }
+  .faq-q::after { content:'+'; font-family:'Orbitron',monospace; font-size:18px; font-weight:700; color:var(--green); transition:transform 0.3s; flex-shrink:0; }
+  .faq-item.open .faq-q::after { transform:rotate(45deg); }
+  .faq-a {
+    max-height:0; overflow:hidden; transition:max-height 0.4s ease, padding 0.3s;
+    font-size:12px; color:#669966; line-height:1.8; padding:0 22px;
+  }
+  .faq-item.open .faq-a { max-height:200px; padding:0 22px 18px; }
+
+  /* ===================== ENHANCED PRICING TILT ===================== */
+  .price-card { perspective:1000px; }
+  .price-card-inner { transition:transform 0.15s ease; transform-style:preserve-3d; }
+
+  /* ===================== TYPING CURSOR ===================== */
+  .typing-cursor { display:inline-block; width:2px; height:1em; background:var(--green); margin-left:4px; animation:blink 0.8s infinite; vertical-align:text-bottom; }
+  @keyframes blink { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
+
+  /* ===================== ENHANCED SCANLINES ===================== */
+  .section-scanline {
+    position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,65,0.008) 3px,rgba(0,255,65,0.008) 4px);
+  }
+
+  @media(max-width:768px) {
+    #features,#pricing,#buy,#contact,#stats,#faq { padding:80px 24px 60px; }
+    nav { padding:14px 20px; } nav ul { display:none; }
+    footer { padding:16px 24px; flex-direction:column; gap:8px; text-align:center; }
+    .divider { margin:0 24px; }
+    .steps::before { display:none; }
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+  }
+
   /* ===================== AUTH MODAL ===================== */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9990; display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
   .modal-overlay.active { display:flex; }
@@ -325,12 +404,12 @@
   </nav>
 
   <section id="hero">
-    <p class="hero-badge"><span class="uz">CS2 uchun</span><span class="ru">Для CS2</span> // <span>PREMIUM SOFTWARE</span></p>
+    <p class="hero-badge reveal"><span class="uz">CS2 uchun</span><span class="ru">Для CS2</span> // <span>PREMIUM SOFTWARE</span></p>
     <h1 class="hero-title">SHIFTHUB</h1>
-    <p class="hero-sub"><span class="uz">PROFESSIONAL CS2 DASTURI</span><span class="ru">ПРОФЕССИОНАЛЬНЫЙ СОФТ CS2</span></p>
-    <p class="hero-desc uz">Eng yuqori sifatli CS2 dasturi. Xavfsiz, tez, ishonchli. Har oyda yangilanib turadi.</p>
-    <p class="hero-desc ru">Премиум CS2 программное обеспечение. Безопасно, быстро, надёжно. Обновляется каждый месяц.</p>
-    <div class="hero-btns">
+    <p class="hero-sub"><span id="typing-text"></span><span class="typing-cursor"></span></p>
+    <p class="hero-desc uz reveal reveal-delay-1">Eng yuqori sifatli CS2 dasturi. Xavfsiz, tez, ishonchli. Har oyda yangilanib turadi.</p>
+    <p class="hero-desc ru reveal reveal-delay-1">Премиум CS2 программное обеспечение. Безопасно, быстро, надёжно. Обновляется каждый месяц.</p>
+    <div class="hero-btns reveal reveal-delay-2">
       <a href="javascript:void(0)" class="btn btn-primary" onclick="downloadEXE()"><span class="uz">YUKLAB OLISH</span><span class="ru">СКАЧАТЬ</span></a>
       <a href="#features" class="btn btn-outline uz">BATAFSIL</a>
       <a href="#features" class="btn btn-outline ru">ПОДРОБНЕЕ</a>
@@ -340,41 +419,72 @@
 
   <div class="divider"></div>
 
+  <!-- ==================== LIVE STATS ==================== -->
+  <section id="stats">
+    <div class="section-scanline"></div>
+    <p class="section-tag reveal">Real vaqt</p>
+    <h2 class="section-title reveal">STATISTIKA</h2>
+    <div class="stats-grid">
+      <div class="stat-card reveal reveal-delay-1">
+        <span class="stat-icon">👥</span>
+        <span class="stat-number" id="stat-total">0</span>
+        <span class="stat-label uz">Jami foydalanuvchi</span><span class="stat-label ru">Всего пользователей</span>
+      </div>
+      <div class="stat-card reveal reveal-delay-2">
+        <span class="stat-icon">🟢</span>
+        <span class="stat-number" id="stat-online">0</span>
+        <span class="stat-label"><span class="stat-live"></span>ONLINE HOZIR</span>
+      </div>
+      <div class="stat-card reveal reveal-delay-3">
+        <span class="stat-icon">📥</span>
+        <span class="stat-number" id="stat-downloads">0</span>
+        <span class="stat-label uz">Yuklamalar</span><span class="stat-label ru">Загрузки</span>
+      </div>
+      <div class="stat-card reveal reveal-delay-4">
+        <span class="stat-icon">⚡</span>
+        <span class="stat-number" id="stat-uptime">99.9%</span>
+        <span class="stat-label">UPTIME</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
   <section id="features">
-    <p class="section-tag uz">Imkoniyatlar</p><p class="section-tag ru">Функции</p>
-    <h2 class="section-title uz">XUSUSIYATLAR</h2><h2 class="section-title ru">ВОЗМОЖНОСТИ</h2>
+    <p class="section-tag reveal uz">Imkoniyatlar</p><p class="section-tag reveal ru">Функции</p>
+    <h2 class="section-title reveal uz">XUSUSIYATLAR</h2><h2 class="section-title reveal ru">ВОЗМОЖНОСТИ</h2>
     <div class="features-grid">
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-1">
         <span class="feature-icon">🎯</span>
         <div class="feature-name">AIMBOT</div>
         <p class="feature-desc uz">Aniq nishonga olish tizimi. Sozlanuvchi tezlik va sezgirlik.</p>
         <p class="feature-desc ru">Точная система прицеливания. Настраиваемая скорость и чувствительность.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-2">
         <span class="feature-icon">👁️</span>
         <div class="feature-name">WALLHACK (ESP)</div>
         <p class="feature-desc uz">Devor orqali dushmanlarni ko'rish. Rang va masofani sozlash mumkin.</p>
         <p class="feature-desc ru">Видение врагов через стены. Настройка цвета и дистанции.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-3">
         <span class="feature-icon">🔫</span>
         <div class="feature-name">NO RECOIL</div>
         <p class="feature-desc uz">Qurol tebranishini to'liq yo'q qilish. Barcha qurollar uchun ishlaydi.</p>
         <p class="feature-desc ru">Полное устранение отдачи. Работает для всего оружия.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-4">
         <span class="feature-icon">🛡️</span>
         <div class="feature-name">BYPASS</div>
         <p class="feature-desc uz">Anti-cheat tizimlarini chetlab o'tish. Doimiy yangilanib turadi.</p>
         <p class="feature-desc ru">Обход античит систем. Постоянно обновляется.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-5">
         <span class="feature-icon">⚡</span>
         <div class="feature-name">BHOP</div>
         <p class="feature-desc uz">Avtomatik bunny hop. Tezlikni maksimal darajada oshirish.</p>
         <p class="feature-desc ru">Автоматический bunny hop. Максимальное увеличение скорости.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal reveal-delay-6">
         <span class="feature-icon">🖥️</span>
         <div class="feature-name">PANEL</div>
         <p class="feature-desc uz">Qulay boshqaruv paneli. Barcha sozlamalarni bir joydan o'zgartiring.</p>
@@ -474,15 +584,55 @@
 
   <div class="divider"></div>
 
+  <!-- ==================== FAQ ==================== -->
+  <section id="faq">
+    <p class="section-tag reveal uz">Ko'p so'raladigan</p><p class="section-tag reveal ru">Частые вопросы</p>
+    <h2 class="section-title reveal uz">SAVOLLAR</h2><h2 class="section-title reveal ru">FAQ</h2>
+    <div class="faq-list">
+      <div class="faq-item reveal reveal-delay-1" onclick="toggleFaq(this)">
+        <div class="faq-q uz">ShiftHub CS2 da ishlaydi? VAC ban xavfi bormi?</div>
+        <div class="faq-q ru">ShiftHub работает в CS2? Есть риск VAC бана?</div>
+        <div class="faq-a uz">Ha, ShiftHub CS2 ning barcha versiyalari bilan ishlaydi. Dastur external (tashqi) usulda ishlaydi va VAC tizimi uchun ko'rinmaydi. Biz doimiy yangilanib turamiz.</div>
+        <div class="faq-a ru">Да, ShiftHub работает со всеми версиями CS2. Программа работает как external (внешний) и не видна для VAC системы. Мы постоянно обновляемся.</div>
+      </div>
+      <div class="faq-item reveal reveal-delay-2" onclick="toggleFaq(this)">
+        <div class="faq-q uz">Free rejimida nimalar mavjud?</div>
+        <div class="faq-q ru">Что доступно в Free режиме?</div>
+        <div class="faq-a uz">Free rejimida: ESP (Wallhack), Radar, C4 Timer va AntiFlash ishlaydi. Ro'yxatdan o'tgandan keyin 10 kun bepul sinab ko'rishingiz mumkin.</div>
+        <div class="faq-a ru">В Free режиме доступны: ESP (Wallhack), Radar, C4 Timer и AntiFlash. После регистрации можно пробовать бесплатно 10 дней.</div>
+      </div>
+      <div class="faq-item reveal reveal-delay-3" onclick="toggleFaq(this)">
+        <div class="faq-q uz">Qanday to'lov qilaman?</div>
+        <div class="faq-q ru">Как оплатить?</div>
+        <div class="faq-a uz">To'lov Telegram orqali qabul qilinadi. @bakoev_me yoki @Shaxriyor_baxtiyorovv ga murojaat qiling. Karta, HUMO, Uzcard, Click, Payme qabul qilinadi.</div>
+        <div class="faq-a ru">Оплата принимается через Telegram. Обратитесь к @bakoev_me или @Shaxriyor_baxtiyorovv. Принимаются карты, HUMO, Uzcard, Click, Payme.</div>
+      </div>
+      <div class="faq-item reveal reveal-delay-4" onclick="toggleFaq(this)">
+        <div class="faq-q uz">HWID nima va nima uchun kerak?</div>
+        <div class="faq-q ru">Что такое HWID и зачем он нужен?</div>
+        <div class="faq-a uz">HWID (Hardware ID) — kompyuteringizning noyob identifikatori. Bir akkaunt bitta kompyuterga bog'liq bo'ladi. Bu akkauntingiz xavfsizligini ta'minlaydi.</div>
+        <div class="faq-a ru">HWID (Hardware ID) — уникальный идентификатор вашего компьютера. Один аккаунт привязан к одному компьютеру. Это обеспечивает безопасность вашего аккаунта.</div>
+      </div>
+      <div class="faq-item reveal reveal-delay-5" onclick="toggleFaq(this)">
+        <div class="faq-q uz">Dastur qanchalik tez-tez yangilanadi?</div>
+        <div class="faq-q ru">Как часто обновляется программа?</div>
+        <div class="faq-a uz">CS2 yangilanishi chiqishi bilan 24-48 soat ichida ShiftHub ham yangilanadi. Yangilanishlar avtomatik bo'ladi — siz hech narsa qilishingiz shart emas.</div>
+        <div class="faq-a ru">После выхода обновления CS2, ShiftHub обновляется в течение 24-48 часов. Обновления автоматические — вам ничего делать не нужно.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
   <section id="contact">
-    <p class="section-tag uz">Aloqa</p><p class="section-tag ru">Контакты</p>
-    <h2 class="section-title uz">BOG'LANISH</h2><h2 class="section-title ru">СВЯЗАТЬСЯ</h2>
-    <p style="font-size:13px;color:#669966;margin-bottom:32px;max-width:400px;line-height:1.8;" class="uz">Savol yoki buyurtma uchun quyidagi kanallar orqali bog'laning. Tez javob beramiz!</p>
-    <p style="font-size:13px;color:#669966;margin-bottom:32px;max-width:400px;line-height:1.8;" class="ru">Для вопросов или заказа свяжитесь через следующие каналы. Отвечаем быстро!</p>
+    <p class="section-tag reveal uz">Aloqa</p><p class="section-tag reveal ru">Контакты</p>
+    <h2 class="section-title reveal uz">BOG'LANISH</h2><h2 class="section-title reveal ru">СВЯЗАТЬСЯ</h2>
+    <p style="font-size:13px;color:#669966;margin-bottom:32px;max-width:400px;line-height:1.8;" class="uz reveal">Savol yoki buyurtma uchun quyidagi kanallar orqali bog'laning. Tez javob beramiz!</p>
+    <p style="font-size:13px;color:#669966;margin-bottom:32px;max-width:400px;line-height:1.8;" class="ru reveal">Для вопросов или заказа свяжитесь через следующие каналы. Отвечаем быстро!</p>
     <div class="contact-links">
-      <a href="https://t.me/shifthubuz" target="_blank" class="contact-link"><span>📢</span><span>Telegram kanal: @shifthubuz</span></a>
-      <a href="https://t.me/bakoev_me" target="_blank" class="contact-link"><span>👨‍💻</span><span>Creator: @bakoev_me</span></a>
-      <a href="https://t.me/Shaxriyor_baxtiyorovv" target="_blank" class="contact-link"><span>🛡️</span><span>Admin: @Shaxriyor_baxtiyorovv</span></a>
+      <a href="https://t.me/shifthubuz" target="_blank" class="contact-link reveal reveal-delay-1"><span>📢</span><span>Telegram kanal: @shifthubuz</span></a>
+      <a href="https://t.me/bakoev_me" target="_blank" class="contact-link reveal reveal-delay-2"><span>👨‍💻</span><span>Creator: @bakoev_me</span></a>
+      <a href="https://t.me/Shaxriyor_baxtiyorovv" target="_blank" class="contact-link reveal reveal-delay-3"><span>🛡️</span><span>Admin: @Shaxriyor_baxtiyorovv</span></a>
     </div>
   </section>
 
@@ -802,6 +952,103 @@ async function downloadEXE() {
 
 // Check auth on load
 updateNavAuth();
+
+/* ============ SCROLL REVEAL ============ */
+(function() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+})();
+
+/* ============ TYPING ANIMATION ============ */
+(function() {
+  const isRu = document.body.classList.contains('ru-mode');
+  const texts = [
+    'PROFESSIONAL CS2 DASTURI',
+    'ESP // AIMBOT // BHOP',
+    'XAVFSIZ VA ISHONCHLI',
+    'PROFESSIONAL CS2 DASTURI'
+  ];
+  const textsRu = [
+    'ПРОФЕССИОНАЛЬНЫЙ СОФТ CS2',
+    'ESP // AIMBOT // BHOP',
+    'БЕЗОПАСНО И НАДЁЖНО',
+    'ПРОФЕССИОНАЛЬНЫЙ СОФТ CS2'
+  ];
+  const el = document.getElementById('typing-text');
+  let ti = 0, ci = 0, deleting = false;
+  function type() {
+    const arr = document.body.classList.contains('ru-mode') ? textsRu : texts;
+    const current = arr[ti];
+    if (!deleting) {
+      el.textContent = current.substring(0, ci++);
+      if (ci > current.length) { deleting = true; setTimeout(type, 1500); return; }
+    } else {
+      el.textContent = current.substring(0, ci--);
+      if (ci < 0) { deleting = false; ti = (ti + 1) % arr.length; ci = 0; setTimeout(type, 400); return; }
+    }
+    setTimeout(type, deleting ? 40 : 80);
+  }
+  setTimeout(type, 1800);
+})();
+
+/* ============ LIVE STATS COUNTER ============ */
+function animateCount(el, target, duration, suffix) {
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(eased * target) + (suffix || '');
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = target + (suffix || '');
+  }
+  requestAnimationFrame(step);
+}
+
+(async function loadStats() {
+  try {
+    const res = await fetch('/api/stats/public');
+    const data = await res.json();
+    const totalEl = document.getElementById('stat-total');
+    const onlineEl = document.getElementById('stat-online');
+    const downloadsEl = document.getElementById('stat-downloads');
+    const uptimeEl = document.getElementById('stat-uptime');
+    if (totalEl) animateCount(totalEl, data.total_users, 2000);
+    if (onlineEl) animateCount(onlineEl, data.online_now, 1500);
+    if (downloadsEl) animateCount(downloadsEl, data.total_downloads, 2500);
+    if (uptimeEl) uptimeEl.textContent = data.uptime;
+  } catch(e) {
+    const totalEl = document.getElementById('stat-total');
+    if (totalEl) animateCount(totalEl, 457, 2000);
+  }
+})();
+
+/* ============ 3D TILT ON PRICING CARDS ============ */
+document.querySelectorAll('.price-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width / 2;
+    const y = e.clientY - r.top - r.height / 2;
+    const tiltX = (y / r.height * 2) * -8;
+    const tiltY = (x / r.width * 2) * 8;
+    card.style.transform = `translateY(-6px) perspective(600px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+    card.style.transition = 'transform 0.4s ease';
+  });
+  card.addEventListener('mouseenter', () => {
+    card.style.transition = 'transform 0.1s ease';
+  });
+});
+
+/* ============ FAQ TOGGLE ============ */
+function toggleFaq(item) {
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
 </script>
 </body>
 </html>
