@@ -63,78 +63,116 @@ function initBot() {
 
   // ==================== Callback Query ====================
   bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const userId = query.from.id;
-    const firstName = query.from.first_name || 'Foydalanuvchi';
-    const username = query.from.username || '—';
-    const data = query.data;
+    try {
+      const chatId = query.message.chat.id;
+      const userId = query.from.id;
+      const username = query.from.username || '—';
+      const data = query.data;
 
-    bot.answerCallbackQuery(query.id);
+      bot.answerCallbackQuery(query.id).catch(() => {});
 
-    if (data.startsWith('buy_')) {
-      const planKey = data.replace('buy_', '');
-      const plan = PLANS[planKey];
-      if (!plan) return;
+      if (data.startsWith('buy_')) {
+        const planKey = data.replace('buy_', '');
+        const plan = PLANS[planKey];
+        if (!plan) return;
 
-      // Pending orderni saqlash
-      try {
-        await db.query(
-          `INSERT INTO pending_orders (id, telegram_user_id, telegram_username, days, amount, status)
-           VALUES ($1, $2, $3, $4, $5, 'pending')`,
-          [uuidv4(), userId, username, plan.days, plan.amount]
+        // Pending orderni saqlash
+        try {
+          await db.query(
+            `INSERT INTO pending_orders (id, telegram_user_id, telegram_username, days, amount, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')`,
+            [uuidv4(), userId, username, plan.days, plan.amount]
+          );
+        } catch(e) {
+          console.error('[Bot] Order save error:', e.message);
+        }
+
+        bot.sendMessage(chatId,
+          `✅ *${plan.label}* tanlandi!\n\n` +
+          `💰 *To'lov miqdori:* ${plan.amount.toLocaleString()} so'm\n` +
+          `📅 *Obuna muddati:* ${plan.days} kun\n\n` +
+          `━━━━━━━━━━━━━━━━━━\n` +
+          `💳 *Karta raqami:*\n\`${PAYMENT_CARD}\`\n` +
+          `━━━━━━━━━━━━━━━━━━\n\n` +
+          `📸 To'lovdan so'ng *chek (screenshot)*ni shu chatga yuboring.\n` +
+          `Admin tekshirib, akkaunt yuboradi (odatda 5-10 daqiqa).\n\n` +
+          `Yoki bot orqali savol yozishingiz mumkin.`,
+          { parse_mode: 'Markdown' }
         );
-      } catch(e) {
-        console.error('[Bot] Order save error:', e.message);
+
+        if (!isNaN(ADMIN_ID)) {
+          bot.sendMessage(ADMIN_ID,
+            `🔔 *Yangi buyurtma!*\n\n` +
+            `👤 Foydalanuvchi: @${username} (ID: \`${userId}\`)\n` +
+            `📦 *Obuna:* ${plan.label}\n` +
+            `📅 *Muddat:* ${plan.days} kun\n\n` +
+            `✅ *Tasdiqlash uchun (pul tushgach):*\n` +
+            `/confirm ${userId} ${plan.days}`,
+            { parse_mode: 'Markdown' }
+          );
+        }
       }
 
-      // Foydalanuvchiga to'lov ko'rsatmasi
-      bot.sendMessage(chatId,
-        `✅ *${plan.label}* tanlandi!\n\n` +
-        `💰 *To'lov miqdori:* ${plan.amount.toLocaleString()} so'm\n` +
-        `📅 *Obuna muddati:* ${plan.days} kun\n\n` +
-        `━━━━━━━━━━━━━━━━━━\n` +
-        `💳 *Karta raqami:*\n\`${PAYMENT_CARD}\`\n` +
-        `━━━━━━━━━━━━━━━━━━\n\n` +
-        `📸 To'lovdan so'ng *chek (screenshot)*ni shu chatga yuboring.\n` +
-        `Admin tekshirib, akkaunt yuboradi (odatda 5-10 daqiqa).\n\n` +
-        `❓ Savol: @bakoev_me`,
-        { parse_mode: 'Markdown' }
-      );
+      if (data === 'myaccount') {
+        bot.sendMessage(chatId,
+          `👤 *Akkaunt ma'lumotlari*\n\n` +
+          `🌐 Akkauntingizni tekshirish uchun:\n` +
+          `[www.shifthub.uz](https://www.shifthub.uz) → *LOGIN* tugmasi`,
+          { parse_mode: 'Markdown', disable_web_page_preview: true }
+        );
+      }
 
-      // Adminga xabar
-      if (!isNaN(ADMIN_ID)) {
-        bot.sendMessage(ADMIN_ID,
-          `🔔 *Yangi buyurtma!*\n\n` +
-          `👤 Foydalanuvchi: @${username} (ID: \`${userId}\`)\n` +
-          `📦 *Obuna:* ${plan.label}\n` +
-          `📅 *Muddat:* ${plan.days} kun\n\n` +
-          `✅ *Tasdiqlash uchun:*\n` +
-          `/confirm ${userId} ${plan.days}`,
+      if (data === 'help') {
+        bot.sendMessage(chatId,
+          `📞 *Admin bilan bog'lanish*\n\n` +
+          `Pastdagi maydonga o'z savolingizni yoki muammongizni yozing. Xabaringiz to'g'ridan-to'g'ri adminga yuboriladi va u shu bot orqali sizga javob qaytaradi! 👇`,
           { parse_mode: 'Markdown' }
         );
       }
+    } catch (e) {
+      console.error('[Bot] callback_query error:', e);
     }
+  });
 
-    if (data === 'myaccount') {
-      bot.sendMessage(chatId,
-        `👤 *Akkaunt ma'lumotlari*\n\n` +
-        `🌐 Akkauntingizni tekshirish uchun:\n` +
-        `[www.shifthub.uz](https://www.shifthub.uz) → *LOGIN* tugmasi\n\n` +
-        `❓ Muammo bo'lsa: @bakoev_me`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
-      );
-    }
+  // ==================== Messages (Live Support / Forwarding) ====================
+  bot.on('message', (msg) => {
+    try {
+      if (msg.text && msg.text.startsWith('/')) return; // Komandalarni o'tkazib yuborish
+      if (msg.chat.type !== 'private') return; // Faqat shaxsiy yozishmalar
 
-    if (data === 'help') {
-      bot.sendMessage(chatId,
-        `❓ *Yordam*\n\n` +
-        `• To'lov qilib, screenshot yuboring\n` +
-        `• Admin 5-10 daqiqa ichida akkaunt yuboradi\n` +
-        `• Akkauntni saytga kirganda ishlatasiz\n\n` +
-        `📞 Admin: @bakoev_me\n` +
-        `📢 Kanal: @shifthubuz`,
-        { parse_mode: 'Markdown' }
-      );
+      const userId = msg.from.id;
+
+      // Agar xabar admindan kelsa va u reply qilgan bo'lsa, foydalanuvchiga javob yuboramiz
+      if (userId === ADMIN_ID) {
+        if (msg.reply_to_message && msg.reply_to_message.forward_from) {
+          const targetId = msg.reply_to_message.forward_from.id;
+          bot.copyMessage(targetId, msg.chat.id, msg.message_id).catch(() => {
+             bot.sendMessage(ADMIN_ID, "❌ Mijozga xabar yuborib bo'lmadi (balki botni bloklagan).");
+          });
+          return;
+        } else if (msg.reply_to_message && msg.reply_to_message.text) {
+          // Fallback, agar forward yashiringan bo'lsa (ID regex orqali qidiramiz)
+          const textMatches = msg.reply_to_message.text.match(/ID:\s(\d+)/);
+          if (textMatches && textMatches[1]) {
+             const targetId = parseInt(textMatches[1]);
+             bot.copyMessage(targetId, msg.chat.id, msg.message_id).catch(() => {});
+             return;
+          }
+        }
+        // Agar reply bo'lmasa, e'tiborsiz qoldiradi (adminning o'zi yozgan boshqa xabarlar)
+      } else {
+        // Oddiy mijoz yozsa, adminga yuboramiz
+        if (!isNaN(ADMIN_ID)) {
+          // Xabarni adminga forward qilamiz (shunda admin reply qila oladi)
+          bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
+            // Ba'zi hollarda privacy sozlamalari tufayli forward ishlamaydi, shu sababli matnni uzatamiz
+            bot.sendMessage(ADMIN_ID, `📩 *Mijozdan xabar*\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'Markdown' });
+            bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
+          });
+        }
+      }
+    } catch(e) {
+      console.error('[Bot] message error:', e);
     }
   });
 
