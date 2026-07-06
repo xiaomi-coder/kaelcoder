@@ -68,6 +68,7 @@ function initBot() {
       const userId = query.from.id;
       const username = query.from.username || '—';
       const data = query.data;
+      const msgId = query.message.message_id;
 
       bot.answerCallbackQuery(query.id).catch(() => {});
 
@@ -78,6 +79,9 @@ function initBot() {
 
         // Pending orderni saqlash
         try {
+          // Oldin eski pending order bo'lsa uni cancelled qilamiz
+          await db.query(`UPDATE pending_orders SET status = 'cancelled' WHERE telegram_user_id = $1 AND status = 'pending'`, [userId]);
+          
           await db.query(
             `INSERT INTO pending_orders (id, telegram_user_id, telegram_username, days, amount, status)
              VALUES ($1, $2, $3, $4, $5, 'pending')`,
@@ -94,23 +98,47 @@ function initBot() {
           `━━━━━━━━━━━━━━━━━━\n` +
           `💳 <b>Karta raqami:</b>\n<code>${PAYMENT_CARD}</code>\n` +
           `━━━━━━━━━━━━━━━━━━\n\n` +
-          `📸 To'lovdan so'ng <b>chek (screenshot)</b>ni shu chatga yuboring.\n` +
-          `Admin tekshirib, akkaunt yuboradi (odatda 5-10 daqiqa).\n\n` +
-          `Yoki bot orqali savol yozishingiz mumkin.`,
-          { parse_mode: 'HTML' }
+          `To'lovni amalga oshirgach, "To'lov qildim" tugmasini bosing yoki to'g'ridan-to'g'ri chekni (screenshot) shu chatga yuboring.`,
+          { 
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "✅ To'lov qildim", callback_data: 'user_paid' }],
+                [{ text: "❌ Bekor qilish", callback_data: 'user_cancel' }]
+              ]
+            }
+          }
         );
+      }
 
-        if (!isNaN(ADMIN_ID)) {
-          bot.sendMessage(ADMIN_ID,
-            `🔔 <b>Yangi buyurtma!</b>\n\n` +
-            `👤 Foydalanuvchi: @${username} (ID: <code>${userId}</code>)\n` +
-            `📦 <b>Obuna:</b> ${plan.label}\n` +
-            `📅 <b>Muddat:</b> ${plan.days} kun\n\n` +
-            `✅ <b>Tasdiqlash uchun (pul tushgach):</b>\n` +
-            `/confirm ${userId} ${plan.days}`,
-            { parse_mode: 'HTML' }
-          );
-        }
+      if (data === 'user_paid') {
+        bot.sendMessage(chatId, `📸 <b>Iltimos, to'lov chekini (screenshot) rasmini shu yerga yuboring.</b>\nShundan so'ng u adminga tasdiqlash uchun jo'natiladi.`, { parse_mode: 'HTML' });
+      }
+
+      if (data === 'user_cancel') {
+        await db.query(`UPDATE pending_orders SET status = 'cancelled' WHERE telegram_user_id = $1 AND status = 'pending'`, [userId]);
+        bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: msgId }).catch(() => {});
+        bot.sendMessage(chatId, `❌ Buyurtma bekor qilindi. Boshqa ta'rif tanlashingiz mumkin.`, { parse_mode: 'HTML' });
+      }
+
+      if (data.startsWith('admin_confirm_')) {
+        if (userId !== ADMIN_ID) return;
+        const parts = data.split('_');
+        const targetId = parseInt(parts[2]);
+        const days = parseInt(parts[3]);
+        
+        bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: msgId }).catch(() => {});
+        await createAccount(bot, targetId, days, ADMIN_ID);
+      }
+
+      if (data.startsWith('admin_reject_')) {
+        if (userId !== ADMIN_ID) return;
+        const targetId = parseInt(data.split('_')[2]);
+        
+        await db.query(`UPDATE pending_orders SET status = 'rejected' WHERE telegram_user_id = $1 AND status = 'pending'`, [targetId]);
+        bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: msgId }).catch(() => {});
+        bot.sendMessage(ADMIN_ID, `❌ To'lov rad etildi.`);
+        bot.sendMessage(targetId, `❌ <b>Kechirasiz, sizning to'lov chekingiz qabul qilinmadi (rad etildi).</b>\nAgar xatolik bo'lsa admin bilan bog'laning.`, { parse_mode: 'HTML' });
       }
 
       if (data === 'myaccount') {
@@ -135,7 +163,7 @@ function initBot() {
   });
 
   // ==================== Messages (Live Support / Forwarding) ====================
-  bot.on('message', (msg) => {
+  bot.on('message', async (msg) => {
     try {
       if (msg.text && msg.text.startsWith('/')) return; // Komandalarni o'tkazib yuborish
       if (msg.chat.type !== 'private') return; // Faqat shaxsiy yozishmalar
@@ -151,7 +179,6 @@ function initBot() {
           });
           return;
         } else if (msg.reply_to_message && msg.reply_to_message.text) {
-          // Fallback, agar forward yashiringan bo'lsa (ID regex orqali qidiramiz)
           const textMatches = msg.reply_to_message.text.match(/ID:\s(\d+)/);
           if (textMatches && textMatches[1]) {
              const targetId = parseInt(textMatches[1]);
@@ -159,13 +186,36 @@ function initBot() {
              return;
           }
         }
-        // Agar reply bo'lmasa, e'tiborsiz qoldiradi (adminning o'zi yozgan boshqa xabarlar)
       } else {
-        // Oddiy mijoz yozsa, adminga yuboramiz
+        // Oddiy mijoz yozmoqda
+        
+        // Agar rasm yuborayotgan bo'lsa (Chek bo'lishi mumkin)
+        if (msg.photo || msg.document) {
+          const pendingRes = await db.query(`SELECT * FROM pending_orders WHERE telegram_user_id = $1 AND status = 'pending'`, [userId]);
+          if (pendingRes.rows.length > 0) {
+            const order = pendingRes.rows[0];
+            
+            // Adminga tasdiqlash uchun inline tugmalar bilan rasm yuboramiz
+            if (!isNaN(ADMIN_ID)) {
+              bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id, {
+                caption: `🔔 <b>Yangi to'lov cheki!</b>\n\n👤 Foydalanuvchi: @${msg.from.username || '—'} (ID: <code>${userId}</code>)\n📦 <b>Muddat:</b> ${order.days} kun\n💰 <b>Summa:</b> ${order.amount} so'm`,
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: "✅ Tasdiqlash va Parol berish", callback_data: `admin_confirm_${userId}_${order.days}` }],
+                    [{ text: "❌ Rad etish", callback_data: `admin_reject_${userId}` }]
+                  ]
+                }
+              }).catch(() => {});
+            }
+            bot.sendMessage(msg.chat.id, "✅ <b>Chek adminga yuborildi.</b>\nIltimos, tasdiqlanishini kuting (odatda 5-10 daqiqa).", { parse_mode: 'HTML' });
+            return;
+          }
+        }
+
+        // Agar oddiy xabar (yoki rasm, lekin pending order yo'q bo'lsa), yordam tariqasida forward qilamiz
         if (!isNaN(ADMIN_ID)) {
-          // Xabarni adminga forward qilamiz (shunda admin reply qila oladi)
           bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
-            // Ba'zi hollarda privacy sozlamalari tufayli forward ishlamaydi, shu sababli matnni uzatamiz
             bot.sendMessage(ADMIN_ID, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' });
             bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
           });
