@@ -97,6 +97,14 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Akkauntingiz bloklangan. Admin bilan bog\'laning.' });
     }
 
+    // Check if subscription has expired
+    if (user.expires_at) {
+      const expDate = new Date(user.expires_at);
+      if (expDate < new Date()) {
+        return res.status(403).json({ error: 'Obuna muddati tugagan! Iltimos, Telegram bot orqali vaqt xarid qiling.' });
+      }
+    }
+
     // HWID Check (Juda muhim: oldin doim yangilangan!)
     if (hwid) {
       if (user.hwid && user.hwid !== hwid) {
