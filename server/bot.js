@@ -14,7 +14,8 @@ const PLANS = {
 };
 
 function randomStr(len) {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  // O'xshash belgilarni olib tashladik: i, I, l (kichik), o, O, 0, 1. (L katta harfi qo'shildi).
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
   for (let i = 0; i < len; i++) result += chars[Math.floor(Math.random() * chars.length)];
   return result;
