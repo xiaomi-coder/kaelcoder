@@ -1003,19 +1003,35 @@ function animateCount(el, target, duration, suffix) {
 }
 
 
-/* Online raqam: 200-600 orasida tasodifiy, har 2-3 daqiqada o'zgaradi */
+/* Online raqamni barqaror ushlab turish uchun time-seeded random usuli */
 (function initOnlineCounter() {
   const onlineEl = document.getElementById('stat-online');
   const downloadsEl = document.getElementById('stat-downloads');
   const uptimeEl = document.getElementById('stat-uptime');
 
-  function randOnline() {
-    // 200-600 orasida, 10 ga bo'linadigan son
-    return Math.floor(Math.random() * 41) * 10 + 200;
+  // Pseudo-random generator (seed ga asoslangan)
+  function seededRandom(seed) {
+    let x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
   }
 
-  // Boshlang'ich qiymat
-  let currentOnline = randOnline();
+  // Vaqtni 2.5 minutlik (150000 ms) bloklarga bo'lamiz
+  // Har 2.5 minutda hamma mijozlarda son o'zgaradi, uning ichida esa doim bir xil qoladi
+  const BLOCK_SIZE = 150000;
+  
+  function getOnlineCountForTime(timeMs) {
+    const blockIndex = Math.floor(timeMs / BLOCK_SIZE);
+    
+    // Asosiy son (250 dan 550 gacha, yaxlitlanmagan)
+    const base = 250 + Math.floor(seededRandom(blockIndex) * 300);
+    
+    // Qo'shimcha shovqin (+- 12), yana ham chalkash bo'lishi uchun
+    const noise = Math.floor(seededRandom(blockIndex * 1.5) * 25) - 12;
+    
+    return base + noise;
+  }
+
+  let currentOnline = getOnlineCountForTime(Date.now());
   if (onlineEl) animateCount(onlineEl, currentOnline, 2000);
 
   // Real yuklamalar va uptime API dan
@@ -1030,24 +1046,15 @@ function animateCount(el, target, duration, suffix) {
     }
   })();
 
-  // Har 2-3 daqiqada online sonini o'zgartir
-  function scheduleNext() {
-    const delay = (120 + Math.random() * 60) * 1000; // 2-3 daqiqa
-    setTimeout(() => {
-      const prev = currentOnline;
-      // Avvalgidan juda katta farq qilmasin: +-30-80 orasida o'zgar
-      let delta = Math.floor(Math.random() * 51 + 30) * (Math.random() > 0.5 ? 1 : -1);
-      let next = prev + delta;
-      // 200-600 chegarasida ushlab tur
-      next = Math.max(200, Math.min(600, next));
-      // 10 ga yaxlashtiramiz
-      next = Math.round(next / 10) * 10;
-      currentOnline = next;
+  // Har 10 soniyada vaqt blokini tekshiramiz
+  // Agar blok o'zgarsa, sonni yangilaymiz
+  setInterval(() => {
+    const newOnline = getOnlineCountForTime(Date.now());
+    if (newOnline !== currentOnline) {
+      currentOnline = newOnline;
       if (onlineEl) animateCount(onlineEl, currentOnline, 1500);
-      scheduleNext();
-    }, delay);
-  }
-  scheduleNext();
+    }
+  }, 10000);
 })();
 
 /* ============ 3D TILT ON PRICING CARDS ============ */
