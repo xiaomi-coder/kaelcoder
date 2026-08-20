@@ -8,9 +8,12 @@ const ADMIN_ID = parseInt(process.env.ADMIN_TELEGRAM_ID);
 const PAYMENT_CARD = process.env.PAYMENT_CARD || '8600 XXXX XXXX XXXX'; // Railway Variables ga qo'shing
 
 const PLANS = {
-  daily:   { label: "☀️ Kunlik — 5,000 so'm",   days: 1,  amount: 5000  },
-  weekly:  { label: "📅 Haftalik — 25,000 so'm", days: 7,  amount: 25000 },
-  monthly: { label: "🏆 Oylik — 70,000 so'm",    days: 30, amount: 70000 },
+  d1:   { label: "☀️ 1 kunlik — 10,000 so'm",   days: 1,   amount: 10000  },
+  d7:   { label: "📅 7 kunlik — 30,000 so'm",   days: 7,   amount: 30000  },
+  d15:  { label: "🗓 15 kunlik — 50,000 so'm",  days: 15,  amount: 50000  },
+  d30:  { label: "🏆 30 kunlik — 90,000 so'm",  days: 30,  amount: 90000  },
+  d90:  { label: "💎 90 kunlik — 200,000 so'm", days: 90,  amount: 200000 },
+  d365: { label: "👑 1 yillik — 600,000 so'm",  days: 365, amount: 600000 },
 };
 
 function randomStr(len) {
@@ -40,20 +43,26 @@ function initBot() {
     bot.sendMessage(chatId,
       `🎮 <b>ShiftHub CS2 — Sotib olish boti</b>\n\n` +
       `Salom, <b>${name}</b>! 👋\n\n` +
-      `Counter-Strike 2 uchun PRO cheat dasturi.\n` +
+      `Counter-Strike 2 uchun VIP dastur.\n` +
       `ESP • Aimbot • BHop • Triggerbot • va boshqalar\n\n` +
-      `📦 <b>Obuna narxlari:</b>\n` +
-      `☀️ Kunlik — <b>5,000 so'm</b> (1 kun)\n` +
-      `📅 Haftalik — <b>25,000 so'm</b> (7 kun)\n` +
-      `🏆 Oylik — <b>70,000 so'm</b> (30 kun)\n\n` +
+      `📦 <b>VIP obuna narxlari:</b>\n` +
+      `☀️ 1 kunlik — <b>10,000 so'm</b>\n` +
+      `📅 7 kunlik — <b>30,000 so'm</b>\n` +
+      `🗓 15 kunlik — <b>50,000 so'm</b>\n` +
+      `🏆 30 kunlik — <b>90,000 so'm</b>\n` +
+      `💎 90 kunlik — <b>200,000 so'm</b>\n` +
+      `👑 1 yillik — <b>600,000 so'm</b>  — eng foydali\n\n` +
       `👇 Birini tanlang:`,
       {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: "☀️ Kunlik — 5,000 so'm", callback_data: 'buy_daily' }],
-            [{ text: "📅 Haftalik — 25,000 so'm", callback_data: 'buy_weekly' }],
-            [{ text: "🏆 Oylik — 70,000 so'm", callback_data: 'buy_monthly' }],
+            [{ text: "☀️ 1 kun — 10,000", callback_data: 'buy_d1' },
+             { text: "📅 7 kun — 30,000", callback_data: 'buy_d7' }],
+            [{ text: "🗓 15 kun — 50,000", callback_data: 'buy_d15' },
+             { text: "🏆 30 kun — 90,000", callback_data: 'buy_d30' }],
+            [{ text: "💎 90 kun — 200,000", callback_data: 'buy_d90' },
+             { text: "👑 1 yil — 600,000", callback_data: 'buy_d365' }],
             [{ text: '👤 Akkauntim', callback_data: 'myaccount' },
              { text: '❓ Yordam', callback_data: 'help' }],
           ]
@@ -396,7 +405,7 @@ async function createAccount(bot, telegramUserId, days, adminChatId) {
 
     await b.sendMessage(telegramUserId,
       `🎉 <b>To'lov tasdiqlandi! Akkauntingiz tayyor!</b>\n\n` +
-      `🎮 <b>ShiftHub CS2 Cheat — PRO</b>\n\n` +
+      `🎮 <b>ShiftHub CS2 — VIP</b>\n\n` +
       `━━━━━━━━━━━━━━━━━━\n` +
       `🔑 <b>Login:</b> <code>${username}</code>\n` +
       `🔐 <b>Parol:</b> <code>${password}</code>\n` +

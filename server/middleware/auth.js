@@ -21,4 +21,14 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
-module.exports = { authMiddleware, adminMiddleware };
+// Token bo'lsa foydalanuvchini aniqlaydi, bo'lmasa ham o'tkazib yuboradi.
+// Bepul yuklab olish uchun: kim yuklayotgani ixtiyoriy.
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch (err) { /* anonim */ }
+  }
+  next();
+}
+
+module.exports = { authMiddleware, adminMiddleware, optionalAuth };

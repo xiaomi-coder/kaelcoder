@@ -1,17 +1,29 @@
 const express = require('express');
 const path = require('path');
 const db = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ==================== DOWNLOAD EXE ====================
-router.get('/exe', authMiddleware, async (req, res) => {
+// ==================== DOWNLOAD EXE (bepul, login shart emas) ====================
+router.get('/exe', optionalAuth, async (req, res) => {
   try {
-    // Increment download count
-    await db.query('UPDATE users SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1', [req.user.id]);
+    if (req.user && req.user.id) {
+      // Login qilgan foydalanuvchi — o'z hisobiga yoziladi
+      await db.query(
+        'UPDATE users SET download_count = COALESCE(download_count, 0) + 1 WHERE id = $1',
+        [req.user.id]
+      );
+    } else {
+      // Anonim yuklab olish — umumiy hisoblagich
+      await db.query(
+        `INSERT INTO settings (key, value) VALUES ('anon_downloads', '1')
+         ON CONFLICT (key) DO UPDATE
+         SET value = (COALESCE(NULLIF(settings.value, ''), '0')::bigint + 1)::text,
+             updated_at = NOW()`
+      );
+    }
 
-    // Send EXE file
     const filePath = path.join(__dirname, '..', 'files', 'formehub.exe');
     res.download(filePath, 'ShiftHub.exe');
   } catch (err) {
