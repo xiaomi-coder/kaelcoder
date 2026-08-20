@@ -7,14 +7,7 @@ const TOKEN = process.env.BOT_TOKEN;
 const ADMIN_ID = parseInt(process.env.ADMIN_TELEGRAM_ID);
 const PAYMENT_CARD = process.env.PAYMENT_CARD || '8600 XXXX XXXX XXXX'; // Railway Variables ga qo'shing
 
-const PLANS = {
-  d1:   { label: "☀️ 1 kunlik — 10,000 so'm",   days: 1,   amount: 10000  },
-  d7:   { label: "📅 7 kunlik — 30,000 so'm",   days: 7,   amount: 30000  },
-  d15:  { label: "🗓 15 kunlik — 50,000 so'm",  days: 15,  amount: 50000  },
-  d30:  { label: "🏆 30 kunlik — 90,000 so'm",  days: 30,  amount: 90000  },
-  d90:  { label: "💎 90 kunlik — 200,000 so'm", days: 90,  amount: 200000 },
-  d365: { label: "👑 1 yillik — 600,000 so'm",  days: 365, amount: 600000 },
-};
+const { PLANS, planByDays } = require('./plans');
 
 function randomStr(len) {
   // O'xshash belgilarni olib tashladik: i, I, l (kichik), o, O, 0, 1. (L katta harfi qo'shildi).
@@ -400,6 +393,19 @@ async function createAccount(bot, telegramUserId, days, adminChatId) {
        VALUES ($1, $2, $3, 'pro', $4, 0, 0, false)`,
       [username, passwordHash, password, expiresAt.toISOString()]
     );
+
+    // Sotuvni daromad hisobiga yozamiz
+    try {
+      const plan = planByDays(days);
+      await db.query(
+        `INSERT INTO sales (admin_name, admin_role, user_id, username, plan_key, days, amount, source, action)
+         SELECT 'bot', 'bot', id, username, $1, $2, $3, 'bot', 'create' FROM users WHERE username = $4`,
+        [plan ? Object.keys(PLANS).find(k => PLANS[k].days === plan.days) : null,
+         days, plan ? plan.amount : 0, username]
+      );
+    } catch (e) {
+      console.error('[Sales] yozib bo\'lmadi:', e.message);
+    }
 
     const expStr = expiresAt.toLocaleDateString('uz-UZ');
 

@@ -13,11 +13,25 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// Ikki admin: egasi va sotuvchi. Har biri o'z paroli bilan kiradi,
+// shunda har bir sotuv kimga tegishli ekani yozib boriladi.
+function resolveAdmin(key) {
+  if (!key) return null;
+  if (process.env.ADMIN_PASSWORD && key === process.env.ADMIN_PASSWORD) {
+    return { name: process.env.ADMIN_NAME || 'egasi', role: 'owner' };
+  }
+  if (process.env.SELLER_PASSWORD && key === process.env.SELLER_PASSWORD) {
+    return { name: process.env.SELLER_NAME || 'sotuvchi', role: 'seller' };
+  }
+  return null;
+}
+
 function adminMiddleware(req, res, next) {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey !== process.env.ADMIN_PASSWORD) {
+  const admin = resolveAdmin(req.headers['x-admin-key']);
+  if (!admin) {
     return res.status(403).json({ error: 'Admin ruxsati yo\'q' });
   }
+  req.admin = admin;
   next();
 }
 
@@ -31,4 +45,4 @@ function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { authMiddleware, adminMiddleware, optionalAuth };
+module.exports = { authMiddleware, adminMiddleware, optionalAuth, resolveAdmin };

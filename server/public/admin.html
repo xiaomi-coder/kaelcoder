@@ -141,6 +141,35 @@
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
   .modal input { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--green); font-family: inherit; margin-bottom: 20px; border-radius: 4px; }
   .modal input:focus { border-color: var(--green); outline: none; }
+  /* --- daromad / sotuv --- */
+  .rev-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:18px; }
+  .rev-card { background:var(--bg-panel); border:1px solid var(--border); border-radius:8px; padding:16px 18px; }
+  .rev-card .v { font-size:24px; font-weight:bold; color:var(--green); letter-spacing:-.5px; }
+  .rev-card .l { font-size:11px; color:#88a888; margin-top:4px; text-transform:uppercase; letter-spacing:1px; }
+  .rev-card.big .v { font-size:28px; }
+  .who { display:inline-block; padding:3px 10px; border:1px solid var(--border); border-radius:20px;
+         font-size:11px; color:var(--green-dim); margin-left:10px; }
+  .who.owner { color:#ffcc00; border-color:#665500; }
+  .mini-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .mini-table th { text-align:left; padding:8px 10px; color:#88a888; font-weight:normal;
+                   border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; }
+  .mini-table td { padding:8px 10px; border-bottom:1px solid rgba(0,255,65,.07); }
+  .mini-table tr:last-child td { border-bottom:0; }
+  .amount { color:var(--green); font-weight:bold; white-space:nowrap; }
+  .src-bot   { color:#00aaff; font-size:10px; border:1px solid #004466; padding:1px 6px; border-radius:10px; }
+  .src-panel { color:#ffcc00; font-size:10px; border:1px solid #665500; padding:1px 6px; border-radius:10px; }
+  .create-box { background:var(--bg-panel); border:1px solid var(--border); border-radius:8px;
+                padding:18px 20px; margin-bottom:30px; }
+  .create-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .create-row > div { display:flex; flex-direction:column; gap:5px; }
+  .create-row label { font-size:11px; color:#88a888; text-transform:uppercase; letter-spacing:1px; }
+  .create-row input, .create-row select {
+    background:#0a140a; border:1px solid var(--border); color:var(--text);
+    padding:9px 11px; border-radius:6px; font-family:inherit; font-size:13px; min-width:150px; }
+  .create-row select option { background:#000; }
+  .cred-out { margin-top:14px; padding:12px 14px; border:1px dashed var(--green-dark);
+              border-radius:6px; background:rgba(0,255,65,.04); font-size:13px; display:none; }
+  .cred-out b { color:var(--green); }
 </style>
 </head>
 <body>
@@ -160,6 +189,49 @@
 
 <div id="dashboard">
   <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- ==================== DAROMAD ==================== -->
+  <div class="section-header">
+    <h2>// DAROMAD <span class="who" id="who-badge">—</span></h2>
+  </div>
+  <div class="rev-grid" id="rev-grid"></div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:34px;" id="rev-tables">
+    <div class="table-container" style="padding:4px 6px;">
+      <div style="padding:10px 10px 4px; color:#88a888; font-size:11px; letter-spacing:1px;">KIM SOTDI</div>
+      <table class="mini-table"><tbody id="by-admin"></tbody></table>
+    </div>
+    <div class="table-container" style="padding:4px 6px;">
+      <div style="padding:10px 10px 4px; color:#88a888; font-size:11px; letter-spacing:1px;">OXIRGI SOTUVLAR</div>
+      <table class="mini-table"><tbody id="sales-list"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ==================== YANGI VIP AKKAUNT ==================== -->
+  <div class="section-header"><h2>// YANGI VIP AKKAUNT</h2></div>
+  <div class="create-box">
+    <div class="create-row">
+      <div>
+        <label>Tarif</label>
+        <select id="new-plan"></select>
+      </div>
+      <div>
+        <label>Username (ixtiyoriy)</label>
+        <input type="text" id="new-username" placeholder="bo'sh = avtomatik">
+      </div>
+      <div>
+        <label>Parol (ixtiyoriy)</label>
+        <input type="text" id="new-password-vip" placeholder="bo'sh = avtomatik">
+      </div>
+      <div>
+        <label>Izoh (ixtiyoriy)</label>
+        <input type="text" id="new-note" placeholder="masalan: Click orqali">
+      </div>
+      <button class="btn btn-primary" onclick="createVip()">YARATISH</button>
+    </div>
+    <div class="cred-out" id="cred-out"></div>
+  </div>
+
 
   <div class="section-header">
     <h2>// FOYDALANUVCHILAR</h2>
@@ -219,6 +291,32 @@
 </div>
 
 <!-- Modal for Block -->
+<div class="modal-overlay" id="extend-modal">
+  <div class="modal">
+    <h3 id="extend-title">// MUDDAT QO'SHISH</h3>
+    <p style="color:#88a888; font-size:12px; margin:10px 0 16px;">
+      Tanlangan muddat mavjud tugash sanasiga qo'shiladi. Muddati o'tgan bo'lsa — bugundan boshlanadi.
+      Bu amal daromadga yoziladi.
+    </p>
+    <input type="hidden" id="extend-userId">
+    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px;">
+      <label style="font-size:11px; color:#88a888; letter-spacing:1px;">TARIF</label>
+      <select id="extend-plan" style="background:#0a140a; border:1px solid var(--border); color:var(--text);
+              padding:10px; border-radius:6px; font-family:inherit; font-size:13px;"></select>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:18px;">
+      <label style="font-size:11px; color:#88a888; letter-spacing:1px;">IZOH (IXTIYORIY)</label>
+      <input type="text" id="extend-note" placeholder="masalan: Payme"
+             style="background:#0a140a; border:1px solid var(--border); color:var(--text);
+                    padding:10px; border-radius:6px; font-family:inherit; font-size:13px;">
+    </div>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('extend-modal')">BEKOR</button>
+      <button class="btn btn-primary" onclick="confirmExtend()">QO'SHISH</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="block-modal">
   <div class="modal">
     <h3 style="color:#ff4444;">// DIQQAT</h3>
@@ -332,6 +430,10 @@ async function loadDashboard() {
   const stats = await apiFetch('/admin/stats');
   if (stats.error) return;
 
+  loadWhoami();
+  loadPlans();
+  loadSales();
+
   document.getElementById('admin-login').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
 
@@ -433,7 +535,7 @@ function renderUsers(users) {
       <td>
         <div class="actions">
           <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'free')">FREE</button>
-          <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'mid')">MID</button>
+          <button class="btn btn-sm" style="color:#00ff41; border-color:#00662a; background:rgba(0,255,65,.12);" onclick="openExtendModal('${u.id}', '${u.username}')">+ VIP</button>
           <button class="btn btn-sm" onclick="openTierModal('${u.id}', '${u.username}', 'pro')">PRO</button>
           <button class="btn btn-sm" style="color: #ffcc00; border-color: #665500; background: rgba(102, 85, 0, 0.2);" onclick="openPasswordModal('${u.id}', '${u.username}')">PAROL</button>
           <button class="btn btn-sm ${blocked ? '' : 'btn-danger'}" onclick="openBlockModal('${u.id}', '${u.username}', ${!blocked})">${blocked ? 'UNBLOCK' : 'BLOCK'}</button>
@@ -553,6 +655,123 @@ async function saveTrialDays() {
   const res = await apiFetch('/admin/settings/free_trial_days', { method:'PUT', body: JSON.stringify({value:days}) });
   if (res.error) showToast(res.error, true);
   else showToast(`Saqlandi: Yangi userlar uchun sinov ${days} kun`);
+}
+
+/* ==================== TARIFLAR / DAROMAD ==================== */
+let PLANS_CACHE = [];
+
+function fmtSum(n) { return Number(n || 0).toLocaleString('ru-RU') + " so'm"; }
+
+async function loadPlans() {
+  if (PLANS_CACHE.length) return PLANS_CACHE;
+  const res = await apiFetch('/admin/plans');
+  PLANS_CACHE = res.plans || [];
+  const html = PLANS_CACHE.map(p =>
+    `<option value="${p.key}">${p.days} kun — ${Number(p.amount).toLocaleString('ru-RU')} so'm</option>`
+  ).join('');
+  const a = document.getElementById('new-plan');
+  const b = document.getElementById('extend-plan');
+  if (a) a.innerHTML = html;
+  if (b) b.innerHTML = html;
+  return PLANS_CACHE;
+}
+
+async function loadWhoami() {
+  const me = await apiFetch('/admin/whoami');
+  const el = document.getElementById('who-badge');
+  if (el && me && me.name) {
+    el.textContent = me.name + (me.role === 'owner' ? ' · egasi' : ' · sotuvchi');
+    el.className = 'who' + (me.role === 'owner' ? ' owner' : '');
+  }
+}
+
+async function loadSales() {
+  const d = await apiFetch('/admin/sales?limit=25');
+  if (d.error) return;
+
+  const t = d.totals || {};
+  document.getElementById('rev-grid').innerHTML = `
+    <div class="rev-card big"><div class="v">${fmtSum(t.today)}</div><div class="l">Bugun</div></div>
+    <div class="rev-card"><div class="v">${fmtSum(t.week)}</div><div class="l">7 kun</div></div>
+    <div class="rev-card"><div class="v">${fmtSum(t.month)}</div><div class="l">Shu oy</div></div>
+    <div class="rev-card"><div class="v">${fmtSum(t.total)}</div><div class="l">Jami</div></div>
+    <div class="rev-card"><div class="v">${t.count || 0}</div><div class="l">Sotuvlar soni</div></div>`;
+
+  const ba = d.by_admin || [];
+  document.getElementById('by-admin').innerHTML = ba.length
+    ? ba.map(a => `<tr>
+        <td>${a.name} <span style="color:#556655; font-size:10px;">${a.role === 'owner' ? 'egasi' : (a.role === 'bot' ? 'bot' : 'sotuvchi')}</span></td>
+        <td style="color:#88a888;">${a.count} ta</td>
+        <td style="color:#88a888;">oy: ${fmtSum(a.month)}</td>
+        <td class="amount">${fmtSum(a.total)}</td>
+      </tr>`).join('')
+    : `<tr><td style="color:#556655; padding:16px 10px;">Hali sotuv yo'q</td></tr>`;
+
+  const list = d.sales || [];
+  document.getElementById('sales-list').innerHTML = list.length
+    ? list.map(x => {
+        const dt = new Date(x.created_at);
+        const when = dt.toLocaleDateString('ru-RU') + ' ' +
+                     dt.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+        return `<tr>
+          <td style="color:#88a888; font-size:11px;">${when}</td>
+          <td>${x.username}</td>
+          <td style="color:#88a888;">${x.days} kun</td>
+          <td><span class="src-${x.source}">${x.source === 'bot' ? 'BOT' : x.admin_name}</span></td>
+          <td class="amount">${fmtSum(x.amount)}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td style="color:#556655; padding:16px 10px;">Hali sotuv yo'q</td></tr>`;
+}
+
+async function createVip() {
+  const plan_key = document.getElementById('new-plan').value;
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password-vip').value.trim();
+  const note     = document.getElementById('new-note').value.trim();
+  if (!plan_key) return showToast('Tarifni tanlang', true);
+
+  const res = await apiFetch('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({ plan_key, username, password, note })
+  });
+  if (res.error) return showToast(res.error, true);
+
+  const out = document.getElementById('cred-out');
+  out.style.display = 'block';
+  out.innerHTML = `Yaratildi — <b>${res.user.username}</b> / <b>${res.user.password}</b>
+    &nbsp;·&nbsp; ${res.sale.days} kun &nbsp;·&nbsp; <b>${fmtSum(res.sale.amount)}</b>
+    &nbsp;·&nbsp; tugaydi: ${new Date(res.user.expires_at).toLocaleDateString('ru-RU')}
+    <button class="btn btn-sm" style="margin-left:12px;"
+      onclick="navigator.clipboard.writeText('Login: ${res.user.username}\nParol: ${res.user.password}'); showToast('Nusxa olindi')">NUSXA</button>`;
+
+  document.getElementById('new-username').value = '';
+  document.getElementById('new-password-vip').value = '';
+  document.getElementById('new-note').value = '';
+  showToast('VIP akkaunt yaratildi');
+  loadDashboard();
+}
+
+async function openExtendModal(id, username) {
+  await loadPlans();
+  document.getElementById('extend-title').innerText = `// ${username.toUpperCase()} — MUDDAT QO'SHISH`;
+  document.getElementById('extend-userId').value = id;
+  document.getElementById('extend-note').value = '';
+  openModal('extend-modal');
+}
+
+async function confirmExtend() {
+  const id = document.getElementById('extend-userId').value;
+  const plan_key = document.getElementById('extend-plan').value;
+  const note = document.getElementById('extend-note').value.trim();
+  closeModal('extend-modal');
+
+  const res = await apiFetch(`/admin/users/${id}/extend`, {
+    method: 'POST', body: JSON.stringify({ plan_key, note })
+  });
+  if (res.error) return showToast(res.error, true);
+  showToast(`${res.sale.days} kun qo'shildi · ${fmtSum(res.sale.amount)}`);
+  loadDashboard();
 }
 
 function timeAgo(date) {

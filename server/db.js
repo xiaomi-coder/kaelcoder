@@ -23,6 +23,41 @@ async function initDb() {
       );
     `);
     console.log('[DB] pending_orders table ready');
+
+    // --- sotuvlar / daromad ---
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sales (
+        id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        admin_name  TEXT NOT NULL,
+        admin_role  TEXT NOT NULL DEFAULT 'seller',
+        user_id     UUID,
+        username    TEXT NOT NULL,
+        plan_key    TEXT,
+        days        INTEGER NOT NULL,
+        amount      BIGINT  NOT NULL,
+        source      TEXT NOT NULL DEFAULT 'panel',
+        action      TEXT NOT NULL DEFAULT 'create',
+        note        TEXT,
+        created_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sales_admin ON sales(admin_name);`);
+    console.log('[DB] sales table ready');
+
+    // --- sozlamalar (anonim yuklab olishlar hisoblagichi shu yerda) ---
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      INSERT INTO settings (key, value) VALUES ('anon_downloads', '0')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    console.log('[DB] settings table ready');
   } catch(e) {
     console.error('[DB] initDb error:', e.message);
   }
