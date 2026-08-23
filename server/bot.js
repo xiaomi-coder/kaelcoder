@@ -318,9 +318,33 @@ function initBot() {
     }
   });
 
+  // ==================== Tekshiruv: /whoami ====================
+  // Hamma uchun ochiq. Bot sizning ID ingizni va admin ekanligingizni aytadi.
+  bot.onText(/\/whoami/, (msg) => {
+    const id = msg.from.id;
+    const ok = isAdmin(id);
+    bot.sendMessage(msg.chat.id,
+      `\u{1F50E} <b>Tekshiruv</b>\n\n` +
+      `\u{1F464} Sizning ID: <code>${id}</code>\n` +
+      `\u{1F6E1} Admin: <b>${ok ? "HA \u2705" : "YO'Q \u274C"}</b>\n\n` +
+      `\u{1F4CB} Botdagi admin ro'yxati:\n<code>${ADMIN_IDS.length ? ADMIN_IDS.join(', ') : "(bo'sh)"}</code>` +
+      (ok ? `\n\n\u{1F6E1} Admin panel: /admin` : ''),
+      { parse_mode: 'HTML' }
+    );
+  });
+
   // ==================== Admin Panel: /admin ====================
   bot.onText(/\/admin/, (msg) => {
-    if (!isAdmin(msg.from.id)) return;
+    if (!isAdmin(msg.from.id)) {
+      // Avval jim qolardi — odam "bot ishlamayapti" deb o'ylardi.
+      bot.sendMessage(msg.chat.id,
+        `\u26D4 Sizda admin huquqi yo'q.\n\n` +
+        `Sizning ID: <code>${msg.from.id}</code>\n` +
+        `Agar bu xato bo'lsa, shu raqamni egasiga yuboring.`,
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
     bot.sendMessage(msg.chat.id, 
       `🛡 <b>Admin Panel</b>\nQuyidagi tugmalardan birini tanlang:`, 
       {
