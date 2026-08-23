@@ -4,8 +4,26 @@ const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 
 const TOKEN = process.env.BOT_TOKEN;
-const ADMIN_ID = parseInt(process.env.ADMIN_TELEGRAM_ID);
-const PAYMENT_CARD = process.env.PAYMENT_CARD || '8600 XXXX XXXX XXXX'; // Railway Variables ga qo'shing
+// Bir nechta admin: ADMIN_TELEGRAM_ID = "111111111,222222222"
+// Bitta qiymat yozilsa ham ishlaydi (eskisi bilan mos).
+const ADMIN_IDS = String(process.env.ADMIN_TELEGRAM_ID || '')
+  .split(',')
+  .map(x => parseInt(x.trim(), 10))
+  .filter(x => !isNaN(x));
+
+// Eski kod bilan moslik uchun: birinchi admin "asosiy"
+const ADMIN_ID = ADMIN_IDS[0];
+
+function isAdmin(id) {
+  return ADMIN_IDS.includes(id);
+}
+
+// Xabarni barcha adminlarga yuborish
+function notifyAdmins(send) {
+  ADMIN_IDS.forEach(id => { try { send(id); } catch (e) { /* birov bloklagan bo'lishi mumkin */ } });
+}
+const PAYMENT_CARD      = process.env.PAYMENT_CARD || '8600 XXXX XXXX XXXX';   // Railway Variables
+const PAYMENT_CARD_NAME = process.env.PAYMENT_CARD_NAME || '';                 // karta egasining ismi
 
 const { PLANS, planByDays } = require('./plans');
 
@@ -100,6 +118,7 @@ function initBot() {
           `📅 <b>Obuna muddati:</b> ${plan.days} kun\n\n` +
           `━━━━━━━━━━━━━━━━━━\n` +
           `💳 <b>Karta raqami:</b>\n<code>${PAYMENT_CARD}</code>\n` +
+          (PAYMENT_CARD_NAME ? `👤 <b>Karta egasi:</b> ${PAYMENT_CARD_NAME}\n` : '') +
           `━━━━━━━━━━━━━━━━━━\n\n` +
           `To'lovni amalga oshirgach, "To'lov qildim" tugmasini bosing yoki to'g'ridan-to'g'ri chekni (screenshot) shu chatga yuboring.`,
           { 
@@ -125,27 +144,58 @@ function initBot() {
       }
 
       if (data.startsWith('admin_confirm_')) {
-        if (userId !== ADMIN_ID) return;
+        if (!isAdmin(userId)) return;
         const parts = data.split('_');
         const targetId = parseInt(parts[2]);
         const days = parseInt(parts[3]);
         
         bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: msgId }).catch(() => {});
-        await createAccount(bot, targetId, days, ADMIN_ID);
+
+        // Ikki admin bir vaqtda bosishi mumkin — buyurtmani atomik "band" qilamiz,
+        // aks holda bitta to'lovga ikkita akkaunt yaratilib ketadi.
+        const claim = await db.query(
+          `UPDATE pending_orders SET status = 'confirmed'
+           WHERE telegram_user_id = $1 AND status = 'pending' RETURNING id`,
+          [targetId]
+        );
+        if (claim.rowCount === 0) {
+          bot.sendMessage(chatId, "ℹ️ Bu buyurtma allaqachon ko'rib chiqilgan.").catch(() => {});
+          return;
+        }
+
+        await createAccount(bot, targetId, days, userId);
+
+        // Qolgan adminlarga kim tasdiqlaganini bildiramiz
+        const who = query.from.username ? '@' + query.from.username : String(userId);
+        ADMIN_IDS.filter(id => id !== userId).forEach(id => {
+          bot.sendMessage(id, `✅ To'lov tasdiqlandi (${who}) — ${days} kunlik akkaunt berildi.`).catch(() => {});
+        });
       }
 
       if (data.startsWith('admin_reject_')) {
-        if (userId !== ADMIN_ID) return;
+        if (!isAdmin(userId)) return;
         const targetId = parseInt(data.split('_')[2]);
         
-        await db.query(`UPDATE pending_orders SET status = 'rejected' WHERE telegram_user_id = $1 AND status = 'pending'`, [targetId]);
         bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: msgId }).catch(() => {});
-        bot.sendMessage(ADMIN_ID, `❌ To'lov rad etildi.`);
+
+        // Tasdiqlashdagi kabi: buyurtmani atomik band qilamiz, aks holda
+        // ikkala admin bossa mijozga xabar ikki marta boradi.
+        const claimR = await db.query(
+          `UPDATE pending_orders SET status = 'rejected'
+           WHERE telegram_user_id = $1 AND status = 'pending' RETURNING id`,
+          [targetId]
+        );
+        if (claimR.rowCount === 0) {
+          bot.sendMessage(chatId, "ℹ️ Bu buyurtma allaqachon ko'rib chiqilgan.").catch(() => {});
+          return;
+        }
+        const whoR = query.from.username ? '@' + query.from.username : String(userId);
+        notifyAdmins(id => bot.sendMessage(id, `❌ To'lov rad etildi (${whoR}).`).catch(() => {}));
         bot.sendMessage(targetId, `❌ <b>Kechirasiz, sizning to'lov chekingiz qabul qilinmadi (rad etildi).</b>\nAgar xatolik bo'lsa admin bilan bog'laning.`, { parse_mode: 'HTML' });
       }
 
       if (data === 'admin_users') {
-        if (userId !== ADMIN_ID) return;
+        if (!isAdmin(userId)) return;
         try {
           const result = await db.query(
             `SELECT username, tier, expires_at, is_blocked FROM users ORDER BY created_at DESC LIMIT 15`
@@ -157,29 +207,29 @@ function initBot() {
             const status = u.is_blocked ? '🚫' : expired ? '❌' : '✅';
             text += `${status} <code>${u.username}</code> — ${u.tier.toUpperCase()} | ${exp.toLocaleDateString()}\n`;
           });
-          bot.sendMessage(ADMIN_ID, text, { parse_mode: 'HTML' });
+          bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
         } catch(e) {
-          bot.sendMessage(ADMIN_ID, `❌ Xato: ${e.message}`);
+          bot.sendMessage(chatId, `❌ Xato: ${e.message}`);
         }
       }
 
       if (data === 'admin_adddays') {
-        if (userId !== ADMIN_ID) return;
-        bot.sendMessage(ADMIN_ID, `➕ <b>Vaqt qo'shish</b>\nFoydalanuvchiga kun qo'shish uchun quyidagi buyruqni yozing:\n<code>/adddays sh_ab12c3 10</code>`, { parse_mode: 'HTML' });
+        if (!isAdmin(userId)) return;
+        bot.sendMessage(chatId, `➕ <b>Vaqt qo'shish</b>\nFoydalanuvchiga kun qo'shish uchun quyidagi buyruqni yozing:\n<code>/adddays sh_ab12c3 10</code>`, { parse_mode: 'HTML' });
       }
 
       if (data === 'admin_block') {
-        if (userId !== ADMIN_ID) return;
-        bot.sendMessage(ADMIN_ID, `🚫 <b>Bloklash</b>\nFoydalanuvchini bloklash uchun quyidagi buyruqni yozing:\n<code>/block sh_ab12c3</code>`, { parse_mode: 'HTML' });
+        if (!isAdmin(userId)) return;
+        bot.sendMessage(chatId, `🚫 <b>Bloklash</b>\nFoydalanuvchini bloklash uchun quyidagi buyruqni yozing:\n<code>/block sh_ab12c3</code>`, { parse_mode: 'HTML' });
       }
 
       if (data === 'admin_stats') {
-        if (userId !== ADMIN_ID) return;
+        if (!isAdmin(userId)) return;
         try {
           const res = await db.query(`SELECT COUNT(*) as c FROM users`);
-          bot.sendMessage(ADMIN_ID, `📊 <b>Statistika</b>\n\nJami ro'yxatdan o'tgan foydalanuvchilar: <b>${res.rows[0].c}</b> ta.`, { parse_mode: 'HTML' });
+          bot.sendMessage(chatId, `📊 <b>Statistika</b>\n\nJami ro'yxatdan o'tgan foydalanuvchilar: <b>${res.rows[0].c}</b> ta.`, { parse_mode: 'HTML' });
         } catch(e) {
-          bot.sendMessage(ADMIN_ID, `❌ Xato: ${e.message}`);
+          bot.sendMessage(chatId, `❌ Xato: ${e.message}`);
         }
       }
 
@@ -218,8 +268,8 @@ function initBot() {
         if (pendingRes.rows.length > 0) {
           const order = pendingRes.rows[0];
           
-          if (!isNaN(ADMIN_ID)) {
-            bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id, {
+          if (ADMIN_IDS.length) {
+            notifyAdmins(adminId => bot.copyMessage(adminId, msg.chat.id, msg.message_id, {
               caption: `🔔 <b>Yangi to'lov cheki!</b>\n\n👤 Foydalanuvchi: @${msg.from.username || '—'} (ID: <code>${userId}</code>)\n📦 <b>Muddat:</b> ${order.days} kun\n💰 <b>Summa:</b> ${order.amount} so'm`,
               parse_mode: 'HTML',
               reply_markup: {
@@ -228,7 +278,7 @@ function initBot() {
                   [{ text: "❌ Rad etish", callback_data: `admin_reject_${userId}` }]
                 ]
               }
-            }).catch(() => {});
+            }).catch(() => {}));
           }
           bot.sendMessage(msg.chat.id, "✅ <b>Chek adminga yuborildi.</b>\nIltimos, tasdiqlanishini kuting (odatda 5-10 daqiqa).", { parse_mode: 'HTML' });
           return;
@@ -236,11 +286,11 @@ function initBot() {
       }
 
       // 2. Agar xabar admindan kelsa va u qandaydir mijozga reply qilgan bo'lsa
-      if (userId === ADMIN_ID && msg.reply_to_message) {
+      if (isAdmin(userId) && msg.reply_to_message) {
         if (msg.reply_to_message.forward_from) {
           const targetId = msg.reply_to_message.forward_from.id;
           bot.copyMessage(targetId, msg.chat.id, msg.message_id).catch(() => {
-             bot.sendMessage(ADMIN_ID, "❌ Mijozga xabar yuborib bo'lmadi (balki botni bloklagan).");
+             bot.sendMessage(userId, "❌ Mijozga xabar yuborib bo'lmadi (balki botni bloklagan).").catch(() => {});
           });
           return;
         } else if (msg.reply_to_message.text) {
@@ -254,10 +304,12 @@ function initBot() {
       }
 
       // 3. Qolgan holatlarda: Oddiy mijoz yozmoqda (rasm yoki text), forward qilamiz
-      if (userId !== ADMIN_ID && !isNaN(ADMIN_ID)) {
-        bot.forwardMessage(ADMIN_ID, msg.chat.id, msg.message_id).catch((e) => {
-          bot.sendMessage(ADMIN_ID, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' });
-          bot.copyMessage(ADMIN_ID, msg.chat.id, msg.message_id);
+      if (!isAdmin(userId) && ADMIN_IDS.length) {
+        notifyAdmins(adminId => {
+          bot.forwardMessage(adminId, msg.chat.id, msg.message_id).catch(() => {
+            bot.sendMessage(adminId, `📩 <b>Mijozdan xabar</b>\nID: ${msg.from.id}\nUsername: @${msg.from.username || '—'}\n\n${msg.text || '[Fayl/Rasm]'}`, { parse_mode: 'HTML' }).catch(() => {});
+            bot.copyMessage(adminId, msg.chat.id, msg.message_id).catch(() => {});
+          });
         });
       }
 
@@ -268,7 +320,7 @@ function initBot() {
 
   // ==================== Admin Panel: /admin ====================
   bot.onText(/\/admin/, (msg) => {
-    if (msg.from.id !== ADMIN_ID) return;
+    if (!isAdmin(msg.from.id)) return;
     bot.sendMessage(msg.chat.id, 
       `🛡 <b>Admin Panel</b>\nQuyidagi tugmalardan birini tanlang:`, 
       {
@@ -287,7 +339,7 @@ function initBot() {
 
   // ==================== Admin: /confirm <userId> <days> ====================
   bot.onText(/\/confirm (\d+) (\d+)/, async (msg, match) => {
-    if (msg.from.id !== ADMIN_ID) {
+    if (!isAdmin(msg.from.id)) {
       return bot.sendMessage(msg.chat.id, '❌ Faqat admin uchun!');
     }
     const targetId = parseInt(match[1]);
@@ -297,7 +349,7 @@ function initBot() {
 
   // ==================== Admin: /adddays <username> <days> ====================
   bot.onText(/\/adddays (\S+) (\d+)/, async (msg, match) => {
-    if (msg.from.id !== ADMIN_ID) return;
+    if (!isAdmin(msg.from.id)) return;
     const uname = match[1].toLowerCase();
     const days = parseInt(match[2]);
 
@@ -324,7 +376,7 @@ function initBot() {
 
   // ==================== Admin: /block <username> ====================
   bot.onText(/\/block (\S+)/, async (msg, match) => {
-    if (msg.from.id !== ADMIN_ID) return;
+    if (!isAdmin(msg.from.id)) return;
     const uname = match[1].toLowerCase();
     try {
       await db.query(`UPDATE users SET is_blocked = true WHERE username = $1`, [uname]);
@@ -336,7 +388,7 @@ function initBot() {
 
   // ==================== Admin: /users ====================
   bot.onText(/\/users/, async (msg) => {
-    if (msg.from.id !== ADMIN_ID) return;
+    if (!isAdmin(msg.from.id)) return;
     try {
       const result = await db.query(
         `SELECT username, tier, expires_at, is_blocked FROM users ORDER BY created_at DESC LIMIT 15`
@@ -356,7 +408,7 @@ function initBot() {
 
   // ==================== Admin: /help ====================
   bot.onText(/\/help/, (msg) => {
-    if (msg.from.id !== ADMIN_ID) return;
+    if (!isAdmin(msg.from.id)) return;
     bot.sendMessage(msg.chat.id,
       `🛠 <b>Admin buyruqlari:</b>\n\n` +
       `/confirm &lt;telegram_id&gt; &lt;kunlar&gt; — Akkaunt yaratish\n` +
