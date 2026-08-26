@@ -227,7 +227,7 @@ router.post('/users', async (req, res) => {
       : 'sh_' + randomStr(7);
     const password = (wantedPw && wantedPw.length >= 4) ? wantedPw : randomStr(10);
 
-    const exists = await db.query('SELECT id FROM users WHERE username = $1', [username]);
+    const exists = await db.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (exists.rows.length) return res.status(409).json({ error: 'Bu username band' });
 
     const passwordHash = await bcrypt.hash(password, 10);

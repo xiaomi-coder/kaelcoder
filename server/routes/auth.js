@@ -21,7 +21,7 @@ router.post('/register', async (req, res) => {
     const uname = username.toLowerCase();
 
     // Check if username exists
-    const existing = await db.query('SELECT id FROM users WHERE username = $1', [uname]);
+    const existing = await db.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [uname]);
 
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Bu username band' });
@@ -79,7 +79,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user
-    const userResult = await db.query('SELECT * FROM users WHERE username = $1', [username.toLowerCase()]);
+    // Registrga bog'liq bo'lmagan qidiruv: bot eski akkauntlarni katta harf
+    // bilan yaratgan ('sh_aB3xYz9'), shuning uchun aniq moslik ishlamaydi.
+    const userResult = await db.query(
+      'SELECT * FROM users WHERE LOWER(username) = LOWER($1) ORDER BY created_at LIMIT 1',
+      [username.trim()]
+    );
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({ error: 'Username yoki password noto\'g\'ri' });

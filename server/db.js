@@ -22,6 +22,13 @@ async function initDb() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    // Foydalanuvchi o'zi tanlaydigan login/parol uchun ustunlar
+    await pool.query(`
+      ALTER TABLE pending_orders
+        ADD COLUMN IF NOT EXISTS desired_username TEXT,
+        ADD COLUMN IF NOT EXISTS desired_password TEXT,
+        ADD COLUMN IF NOT EXISTS step TEXT DEFAULT 'await_payment';
+    `);
     console.log('[DB] pending_orders table ready');
 
     // --- sotuvlar / daromad ---
